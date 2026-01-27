@@ -10,6 +10,7 @@ import {
   Modal,
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 interface MenuItem {
   id: string;
@@ -347,7 +348,7 @@ export default function MenuScreen() {
               styles.headerTitle,
               {
                 color: accent,
-                fontSize: fontSize.fs1100,
+                fontSize: fontSize.fs800,
                 fontWeight: fontWeight.bold,
               },
             ]}
@@ -372,14 +373,11 @@ export default function MenuScreen() {
               styles.iconButton,
               {
                 backgroundColor: accent,
-                padding: spacing.space300,
-                paddingHorizontal: spacing.space400,
+                padding: spacing.space400,
                 borderRadius: borderRadius.br50,
                 marginRight: spacing.space300,
-                borderWidth: borderWidth.bw20,
+                borderWidth: borderWidth.bw10,
                 borderColor: accent,
-                minWidth: 48,
-                ...shadows.small,
               },
             ]}
           >
@@ -391,7 +389,26 @@ export default function MenuScreen() {
                 textAlign: 'center',
               }}
             >
-              {isDark ? '🌙' : '☀️'}
+              {isDark ? (
+                <Svg width={22} height={22} viewBox="0 0 24 24">
+                  <Path
+                    d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                    fill="white"
+                  />
+                </Svg>
+              ) : (
+                <Svg width={22} height={22} viewBox="0 0 24 24">
+                  <Circle cx="12" cy="12" r="5" fill="white" />
+                  <Line x1="12" y1="1" x2="12" y2="4" stroke="white" strokeWidth="2" />
+                  <Line x1="12" y1="20" x2="12" y2="23" stroke="white" strokeWidth="2" />
+                  <Line x1="1" y1="12" x2="4" y2="12" stroke="white" strokeWidth="2" />
+                  <Line x1="20" y1="12" x2="23" y2="12" stroke="white" strokeWidth="2" />
+                  <Line x1="4.5" y1="4.5" x2="6.5" y2="6.5" stroke="white" strokeWidth="2" />
+                  <Line x1="17.5" y1="17.5" x2="19.5" y2="19.5" stroke="white" strokeWidth="2" />
+                  <Line x1="4.5" y1="19.5" x2="6.5" y2="17.5" stroke="white" strokeWidth="2" />
+                  <Line x1="17.5" y1="6.5" x2="19.5" y2="4.5" stroke="white" strokeWidth="2" />
+                </Svg>
+              )}
             </Text>
           </TouchableOpacity>
 
@@ -573,13 +590,18 @@ export default function MenuScreen() {
         showsHorizontalScrollIndicator={false}
         style={[
           styles.categoryScroll,
-          { 
+          {
             backgroundColor: colors.background.tertiary,
             borderBottomWidth: borderWidth.bw10,
             borderBottomColor: colors.border.lighter,
+            maxHeight: 50,
           },
         ]}
-        contentContainerStyle={{ padding: spacing.space400, paddingRight: spacing.space600 }}
+        contentContainerStyle={{
+          alignItems: "center",
+          paddingVertical: spacing.space150,
+          paddingHorizontal: spacing.space400,
+        }}
       >
         {categories.map((category) => {
           const isSelected = selectedCategory === category.id;
@@ -591,8 +613,8 @@ export default function MenuScreen() {
                 styles.categoryButton,
                 {
                   backgroundColor: isSelected ? accent : colors.background.elevated,
-                  paddingVertical: spacing.space300,
-                  paddingHorizontal: spacing.space400,
+                  paddingVertical: spacing.space100,
+                  paddingHorizontal: spacing.space500,
                   borderRadius: borderRadius.br70,
                   marginRight: spacing.space300,
                   borderWidth: borderWidth.bw20,
@@ -601,7 +623,7 @@ export default function MenuScreen() {
                 },
               ]}
             >
-              <Text style={{ fontSize: fontSize.fs400, marginRight: spacing.space150 }}>
+              <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space100 }}>
                 {category.icon}
               </Text>
               <Text
@@ -634,11 +656,11 @@ export default function MenuScreen() {
             fontSize: fontSize.fs200,
           }}
         >
-          {filteredMenu.length} {filteredMenu.length === 1 ? 'item' : 'items'} found
+          {filteredMenu.length} {filteredMenu.length === 1 ? 'item' : 'items'}
         </Text>
       </View>
 
-      {/* Menu Items */}
+      {/* Menu Items - MINIMALISTIC DESIGN */}
       <ScrollView
         style={styles.menuScroll}
         contentContainerStyle={{ padding: spacing.space400 }}
@@ -686,159 +708,55 @@ export default function MenuScreen() {
                   {
                     backgroundColor: colors.background.elevated,
                     padding: spacing.space400,
-                    borderRadius: borderRadius.br70,
-                    marginBottom: spacing.space400,
-                    borderWidth: borderWidth.bw20,
-                    borderColor: isInCart ? accent : colors.border.light,
-                    ...shadows.medium,
+                    borderRadius: borderRadius.br50,
+                    marginBottom: spacing.space300,
+                    borderWidth: borderWidth.bw10,
+                    borderColor: isInCart ? accent : colors.border.subtle,
                   },
                 ]}
               >
-                {/* Badges Row */}
-                <View style={[styles.badgesRow, { marginBottom: spacing.space300, flexDirection: 'row', flexWrap: 'wrap' }]}>
-                  {item.isPopular && (
-                    <View
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: colors.background.positive,
-                          paddingHorizontal: spacing.space300,
-                          paddingVertical: spacing.space150,
-                          borderRadius: borderRadius.br40,
-                          marginRight: spacing.space150,
-                          marginBottom: spacing.space150,
-                          borderWidth: borderWidth.bw10,
-                          borderColor: colors.border.positive,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: colors.foreground.positive,
-                          fontSize: fontSize.fs100,
-                          fontWeight: fontWeight.bold,
-                        }}
-                      >
-                        ⭐ Popular
-                      </Text>
-                    </View>
-                  )}
-                  {item.isNew && (
-                    <View
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: colors.background.link,
-                          paddingHorizontal: spacing.space300,
-                          paddingVertical: spacing.space150,
-                          borderRadius: borderRadius.br40,
-                          marginRight: spacing.space150,
-                          marginBottom: spacing.space150,
-                          borderWidth: borderWidth.bw10,
-                          borderColor: colors.border.link,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: colors.foreground.link,
-                          fontSize: fontSize.fs100,
-                          fontWeight: fontWeight.bold,
-                        }}
-                      >
-                        🆕 New
-                      </Text>
-                    </View>
-                  )}
-                  {item.isVegetarian && (
-                    <View
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: colors.background.accentCM,
-                          paddingHorizontal: spacing.space300,
-                          paddingVertical: spacing.space150,
-                          borderRadius: borderRadius.br40,
-                          marginRight: spacing.space150,
-                          marginBottom: spacing.space150,
-                          borderWidth: borderWidth.bw10,
-                          borderColor: colors.border.accentCM,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: colors.foreground.accentCM,
-                          fontSize: fontSize.fs100,
-                          fontWeight: fontWeight.bold,
-                        }}
-                      >
-                        🌱 Veg
-                      </Text>
-                    </View>
-                  )}
-                  {item.isSpicy && (
-                    <View
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: colors.background.negative,
-                          paddingHorizontal: spacing.space300,
-                          paddingVertical: spacing.space150,
-                          borderRadius: borderRadius.br40,
-                          marginRight: spacing.space150,
-                          marginBottom: spacing.space150,
-                          borderWidth: borderWidth.bw10,
-                          borderColor: colors.border.negative,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: colors.foreground.negative,
-                          fontSize: fontSize.fs100,
-                          fontWeight: fontWeight.bold,
-                        }}
-                      >
-                        🌶️ Spicy
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Item Name and Rating */}
-                <View style={{ marginBottom: spacing.space300 }}>
-                  <Text
-                    style={{
-                      color: colors.foreground.primary,
-                      fontSize: fontSize.fs900,
-                      fontWeight: fontWeight.bold,
-                    }}
-                  >
-                    {item.name}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.space150 }}>
-                    <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space150 }}>
-                      {getRatingStars(item.rating)}
-                    </Text>
+                {/* Top Row: Name, Rating, Badges */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.space200 }}>
+                  <View style={{ flex: 1 }}>
                     <Text
                       style={{
-                        color: colors.foreground.secondary,
-                        fontSize: fontSize.fs200,
+                        color: colors.foreground.primary,
+                        fontSize: fontSize.fs500,
                         fontWeight: fontWeight.bold,
                       }}
                     >
-                      {item.rating}
+                      {item.name}
                     </Text>
-                    <Text
-                      style={{
-                        color: colors.foreground.lighter,
-                        fontSize: fontSize.fs100,
-                        marginLeft: spacing.space150,
-                      }}
-                    >
-                      ({item.reviews} reviews)
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.space100 }}>
+                      <Text style={{ fontSize: fontSize.fs100 }}>⭐</Text>
+                      <Text
+                        style={{
+                          color: colors.foreground.secondary,
+                          fontSize: fontSize.fs100,
+                          fontWeight: fontWeight.medium,
+                          marginLeft: spacing.space100,
+                        }}
+                      >
+                        {item.rating}
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.foreground.lighter,
+                          fontSize: fontSize.fs100,
+                          marginLeft: spacing.space100,
+                        }}
+                      >
+                        ({item.reviews})
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {/* Mini Badges */}
+                  <View style={{ flexDirection: 'row', gap: spacing.space150 }}>
+                    {item.isPopular && <Text style={{ fontSize: fontSize.fs300 }}>🔥</Text>}
+                    {item.isNew && <Text style={{ fontSize: fontSize.fs300 }}>✨</Text>}
+                    {item.isVegetarian && <Text style={{ fontSize: fontSize.fs300 }}>🌱</Text>}
+                    {item.isSpicy && <Text style={{ fontSize: fontSize.fs300 }}>🌶️</Text>}
                   </View>
                 </View>
 
@@ -847,81 +765,58 @@ export default function MenuScreen() {
                   style={{
                     color: colors.foreground.tertiary,
                     fontSize: fontSize.fs200,
-                    lineHeight: lineHeight.lh300,
-                    marginBottom: spacing.space400,
+                    marginBottom: spacing.space300,
                   }}
+                  numberOfLines={2}
                 >
                   {item.description}
                 </Text>
 
-                {/* Price and Actions */}
+                {/* Bottom Row: Price and Add Button */}
                 <View
-                  style={[
-                    styles.menuItemFooter,
-                    {
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingTop: spacing.space300,
-                      borderTopWidth: borderWidth.bw10,
-                      borderTopColor: colors.border.lighter,
-                    },
-                  ]}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
                 >
-                  <View>
-                    <Text
-                      style={{
-                        color: colors.foreground.light,
-                        fontSize: fontSize.fs100,
-                        textDecorationLine: 'line-through',
-                      }}
-                    >
-                      ${(item.price * 1.2).toFixed(2)}
-                    </Text>
-                    <Text
-                      style={{
-                        color: accent,
-                        fontSize: fontSize.fs1100,
-                        fontWeight: fontWeight.bold,
-                      }}
-                    >
-                      ${item.price.toFixed(2)}
-                    </Text>
-                  </View>
+                  <Text
+                    style={{
+                      color: accent,
+                      fontSize: fontSize.fs700,
+                      fontWeight: fontWeight.bold,
+                    }}
+                  >
+                    ${item.price.toFixed(2)}
+                  </Text>
 
                   {isInCart ? (
                     <View
-                      style={[
-                        styles.quantityControls,
-                        {
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          backgroundColor: accentAlpha,
-                          padding: spacing.space150,
-                          borderRadius: borderRadius.br50,
-                          borderWidth: borderWidth.bw10,
-                          borderColor: accent,
-                        },
-                      ]}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: accentAlpha,
+                        paddingVertical: spacing.space150,
+                        paddingHorizontal: spacing.space300,
+                        borderRadius: borderRadius.br40,
+                        borderWidth: borderWidth.bw10,
+                        borderColor: accent,
+                      }}
                     >
                       <TouchableOpacity
                         onPress={() => removeFromCart(item.id)}
-                        style={[
-                          styles.quantityButton,
-                          {
-                            backgroundColor: colors.contrast.white,
-                            width: 32,
-                            height: 32,
-                            borderRadius: borderRadius.br40,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          },
-                        ]}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: borderRadius.br40,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
                       >
                         <Text
                           style={{
                             color: accent,
-                            fontSize: fontSize.fs700,
+                            fontSize: fontSize.fs500,
                             fontWeight: fontWeight.bold,
                           }}
                         >
@@ -932,10 +827,10 @@ export default function MenuScreen() {
                       <Text
                         style={{
                           color: foregroundAccent,
-                          fontSize: fontSize.fs700,
+                          fontSize: fontSize.fs400,
                           fontWeight: fontWeight.bold,
-                          marginHorizontal: spacing.space400,
-                          minWidth: 24,
+                          marginHorizontal: spacing.space300,
+                          minWidth: 20,
                           textAlign: 'center',
                         }}
                       >
@@ -944,23 +839,18 @@ export default function MenuScreen() {
 
                       <TouchableOpacity
                         onPress={() => addToCart(item.id)}
-                        style={[
-                          styles.quantityButton,
-                          {
-                            backgroundColor: accent,
-                            width: 32,
-                            height: 32,
-                            borderRadius: borderRadius.br40,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            ...shadows.small,
-                          },
-                        ]}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: borderRadius.br40,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
                       >
                         <Text
                           style={{
-                            color: colors.contrast.white,
-                            fontSize: fontSize.fs700,
+                            color: accent,
+                            fontSize: fontSize.fs500,
                             fontWeight: fontWeight.bold,
                           }}
                         >
@@ -971,25 +861,21 @@ export default function MenuScreen() {
                   ) : (
                     <TouchableOpacity
                       onPress={() => addToCart(item.id)}
-                      style={[
-                        styles.addButton,
-                        {
-                          backgroundColor: accent,
-                          paddingVertical: spacing.space300,
-                          paddingHorizontal: spacing.space600,
-                          borderRadius: borderRadius.br50,
-                          ...shadows.medium,
-                        },
-                      ]}
+                      style={{
+                        backgroundColor: accent,
+                        paddingVertical: spacing.space200,
+                        paddingHorizontal: spacing.space500,
+                        borderRadius: borderRadius.br40,
+                      }}
                     >
                       <Text
                         style={{
                           color: colors.contrast.white,
-                          fontSize: fontSize.fs400,
+                          fontSize: fontSize.fs300,
                           fontWeight: fontWeight.bold,
                         }}
                       >
-                        Add to Cart
+                        Add
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -1045,6 +931,7 @@ export default function MenuScreen() {
           </View>
 
           <TouchableOpacity
+            onPress={() => setShowCart(true)}
             style={[
               styles.checkoutButton,
               {
@@ -1063,7 +950,7 @@ export default function MenuScreen() {
                 fontWeight: fontWeight.bold,
               }}
             >
-              Checkout →
+              View Cart →
             </Text>
           </TouchableOpacity>
         </View>
