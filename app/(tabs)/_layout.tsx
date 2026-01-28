@@ -42,9 +42,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="admin"
         options={{
-          title: 'Search',
+          title: 'Admin',
           tabBarIcon: () => <Text style={{ fontSize: 24 }}>🔍</Text>,
         }}
       />

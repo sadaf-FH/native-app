@@ -3,14 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   SafeAreaView,
   TextInput,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import Header from '@/components/base/Header';
+import MenuItemCard from '@/components/base/Card';
 
 interface MenuItem {
   id: string;
@@ -24,6 +26,7 @@ interface MenuItem {
   isNew?: boolean;
   rating: number;
   reviews: number;
+  image?: any;
 }
 
 const MENU_DATA: MenuItem[] = [
@@ -37,6 +40,7 @@ const MENU_DATA: MenuItem[] = [
     isPopular: true,
     rating: 4.5,
     reviews: 128,
+    image: require('@/assets/images/bruschetta.jpeg'),
   },
   {
     id: '2',
@@ -47,6 +51,7 @@ const MENU_DATA: MenuItem[] = [
     isNew: true,
     rating: 4.8,
     reviews: 45,
+    image: require('@/assets/images/calamari.jpg'),
   },
   {
     id: '3',
@@ -57,6 +62,7 @@ const MENU_DATA: MenuItem[] = [
     isVegetarian: true,
     rating: 4.2,
     reviews: 203,
+    image: require('@/assets/images/caesar-salad.jpg'),
   },
   {
     id: '4',
@@ -172,24 +178,20 @@ type CategoryType = 'all' | 'appetizer' | 'main' | 'dessert' | 'beverage';
 type SortType = 'default' | 'price-low' | 'price-high' | 'rating';
 
 export default function MenuScreen() {
-  const { 
-    colors, 
-    spacing, 
+  const {
+    colors,
+    spacing,
     fontSize,
     fontWeight,
-    lineHeight,
-    borderRadius, 
+    borderRadius,
     borderWidth,
-    shadows, 
-    isDark,
-    toggleTheme,
+    shadows,
     zIndex,
   } = useTheme();
-  
+
   const accent = colors.accent.CO;
   const accentAlpha = colors.accent.COAlpha;
-  const foregroundAccent = colors.foreground.accentCO;
-  
+
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,12 +216,12 @@ export default function MenuScreen() {
   ];
 
   const getFilteredAndSortedMenu = () => {
-    let filtered = selectedCategory === 'all' 
-      ? MENU_DATA 
+    let filtered = selectedCategory === 'all'
+      ? MENU_DATA
       : MENU_DATA.filter(item => item.category === selectedCategory);
 
     if (searchQuery) {
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -281,231 +283,77 @@ export default function MenuScreen() {
     setTimeout(() => setNotification(null), 2000);
   };
 
-  const getRatingStars = (rating: number) => {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-    const stars = [];
-    
-    for (let i = 0; i < fullStars; i++) {
-      stars.push('⭐');
-    }
-    if (hasHalfStar) {
-      stars.push('⭐');
-    }
-    
-    return stars.join('');
+  // Render each menu item card
+  const renderMenuItem = ({ item }: { item: MenuItem }) => {
+    const itemQuantity = cart[item.id] || 0;
+    return (
+      <MenuItemCard
+        item={item}
+        quantity={itemQuantity}
+        onAdd={addToCart}
+        onRemove={removeFromCart}
+      />
+    );
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
-      {/* Notification Toast */}
-      {notification && (
-        <View
-          style={[
-            styles.notification,
-            {
-              position: 'absolute',
-              top: 60,
-              left: spacing.space400,
-              right: spacing.space400,
-              backgroundColor: colors.action.positive,
-              padding: spacing.space400,
-              borderRadius: borderRadius.br50,
-              zIndex: zIndex.toast,
-              ...shadows.large,
-            },
-          ]}
-        >
-          <Text
-            style={{
-              color: colors.contrast.white,
-              fontSize: fontSize.fs400,
-              fontWeight: fontWeight.bold,
-              textAlign: 'center',
-            }}
-          >
-            {notification}
-          </Text>
-        </View>
-      )}
-
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.background.elevated,
-            borderBottomWidth: borderWidth.bw20,
-            borderBottomColor: colors.border.medium,
-            padding: spacing.space400,
-            ...shadows.medium,
-          },
-        ]}
+  // Empty state component
+  const renderEmptyState = () => (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: spacing.space1200,
+      }}
+    >
+      <Text style={{ fontSize: 64, marginBottom: spacing.space400 }}>🔍</Text>
+      <Text
+        style={{
+          color: colors.foreground.primary,
+          fontSize: fontSize.fs700,
+          fontWeight: fontWeight.bold,
+          marginBottom: spacing.space150,
+        }}
       >
-        <View>
-          <Text
-            style={[
-              styles.headerTitle,
-              {
-                color: accent,
-                fontSize: fontSize.fs800,
-                fontWeight: fontWeight.bold,
-              },
-            ]}
-          >
-            La Tavola 
-          </Text>
-          <Text
-            style={{
-              color: colors.foreground.tertiary,
-              fontSize: fontSize.fs200,
-              marginTop: spacing.space150,
-            }}
-          >
-            Italian Fine Dining
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          {/* Theme Toggle */}
-          <TouchableOpacity
-            onPress={toggleTheme}
-            style={[
-              styles.iconButton,
-              {
-                backgroundColor: accent,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                marginRight: spacing.space300,
-                borderWidth: borderWidth.bw10,
-                borderColor: accent,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: colors.contrast.white,
-                fontSize: fontSize.fs400,
-                fontWeight: fontWeight.bold,
-                textAlign: 'center',
-              }}
-            >
-              {isDark ? (
-                <Svg width={22} height={22} viewBox="0 0 24 24">
-                  <Path
-                    d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                    fill="white"
-                  />
-                </Svg>
-              ) : (
-                <Svg width={22} height={22} viewBox="0 0 24 24">
-                  <Circle cx="12" cy="12" r="5" fill="white" />
-                  <Line x1="12" y1="1" x2="12" y2="4" stroke="white" strokeWidth="2" />
-                  <Line x1="12" y1="20" x2="12" y2="23" stroke="white" strokeWidth="2" />
-                  <Line x1="1" y1="12" x2="4" y2="12" stroke="white" strokeWidth="2" />
-                  <Line x1="20" y1="12" x2="23" y2="12" stroke="white" strokeWidth="2" />
-                  <Line x1="4.5" y1="4.5" x2="6.5" y2="6.5" stroke="white" strokeWidth="2" />
-                  <Line x1="17.5" y1="17.5" x2="19.5" y2="19.5" stroke="white" strokeWidth="2" />
-                  <Line x1="4.5" y1="19.5" x2="6.5" y2="17.5" stroke="white" strokeWidth="2" />
-                  <Line x1="17.5" y1="6.5" x2="19.5" y2="4.5" stroke="white" strokeWidth="2" />
-                </Svg>
-              )}
-            </Text>
-          </TouchableOpacity>
+        No items found
+      </Text>
+      <Text
+        style={{
+          color: colors.foreground.tertiary,
+          fontSize: fontSize.fs200,
+          textAlign: 'center',
+        }}
+      >
+        Try adjusting your search or filters
+      </Text>
+    </View>
+  );
 
-          <TouchableOpacity
-            onPress={() => setShowFilters(!showFilters)}
-            style={[
-              styles.iconButton,
-              {
-                backgroundColor: showFilters ? accentAlpha : colors.state.primary.hover,
-                padding: spacing.space300,
-                borderRadius: borderRadius.br50,
-                marginRight: spacing.space300,
-                borderWidth: borderWidth.bw10,
-                borderColor: showFilters ? accent : colors.border.subtle,
-              },
-            ]}
-          >
-            <Text style={{ fontSize: fontSize.fs700 }}>🔍</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setShowCart(true)}
-            style={[
-              styles.cartButton,
-              {
-                backgroundColor: getTotalItems() > 0 ? accent : colors.state.primary.hover,
-                padding: spacing.space300,
-                borderRadius: borderRadius.br50,
-                position: 'relative',
-                borderWidth: borderWidth.bw10,
-                borderColor: getTotalItems() > 0 ? accent : colors.border.subtle,
-              },
-            ]}
-          >
-            <Text style={{ fontSize: fontSize.fs700 }}>🛒</Text>
-            {getTotalItems() > 0 && (
-              <View
-                style={[
-                  styles.cartBadge,
-                  {
-                    backgroundColor: colors.action.negative,
-                    position: 'absolute',
-                    top: -spacing.space150,
-                    right: -spacing.space150,
-                    borderRadius: borderRadius.brFull,
-                    minWidth: 20,
-                    height: 20,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: borderWidth.bw20,
-                    borderColor: colors.background.elevated,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: colors.contrast.white,
-                    fontSize: fontSize.fs100,
-                    fontWeight: fontWeight.bold,
-                  }}
-                >
-                  {getTotalItems()}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
+  // Header component for FlatList
+  const renderHeader = () => (
+    <>
       {/* Search and Filter Bar */}
       {showFilters && (
         <View
-          style={[
-            styles.filterBar,
-            {
-              backgroundColor: colors.background.secondary,
-              padding: spacing.space400,
-              borderBottomWidth: borderWidth.bw10,
-              borderBottomColor: colors.border.light,
-            },
-          ]}
+          style={{
+            backgroundColor: colors.background.secondary,
+            padding: spacing.space400,
+            borderBottomWidth: borderWidth.bw10,
+            borderBottomColor: colors.border.light,
+          }}
         >
           {/* Search Input */}
           <View
-            style={[
-              styles.searchContainer,
-              {
-                backgroundColor: colors.background.elevated,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: searchQuery ? accent : colors.border.subtle,
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: spacing.space400,
-                marginBottom: spacing.space400,
-              },
-            ]}
+            style={{
+              backgroundColor: colors.background.elevated,
+              borderRadius: borderRadius.br50,
+              borderWidth: borderWidth.bw10,
+              borderColor: searchQuery ? accent : colors.border.subtle,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: spacing.space400,
+              marginBottom: spacing.space400,
+            }}
           >
             <Text style={{ fontSize: fontSize.fs400, marginRight: spacing.space300 }}>🔎</Text>
             <TextInput
@@ -552,18 +400,17 @@ export default function MenuScreen() {
                 <TouchableOpacity
                   key={option.id}
                   onPress={() => setSortBy(option.id as SortType)}
-                  style={[
-                    styles.sortOption,
-                    {
-                      backgroundColor: isSelected ? accent : colors.background.elevated,
-                      paddingVertical: spacing.space300,
-                      paddingHorizontal: spacing.space400,
-                      borderRadius: borderRadius.br50,
-                      marginRight: spacing.space300,
-                      borderWidth: borderWidth.bw10,
-                      borderColor: isSelected ? accent : colors.border.subtle,
-                    },
-                  ]}
+                  style={{
+                    backgroundColor: isSelected ? accent : colors.background.elevated,
+                    paddingVertical: spacing.space300,
+                    paddingHorizontal: spacing.space400,
+                    borderRadius: borderRadius.br50,
+                    marginRight: spacing.space300,
+                    borderWidth: borderWidth.bw10,
+                    borderColor: isSelected ? accent : colors.border.subtle,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
                 >
                   <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space150 }}>
                     {option.icon}
@@ -588,15 +435,12 @@ export default function MenuScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={[
-          styles.categoryScroll,
-          {
-            backgroundColor: colors.background.tertiary,
-            borderBottomWidth: borderWidth.bw10,
-            borderBottomColor: colors.border.lighter,
-            maxHeight: 50,
-          },
-        ]}
+        style={{
+          backgroundColor: colors.background.tertiary,
+          borderBottomWidth: borderWidth.bw10,
+          borderBottomColor: colors.border.lighter,
+          maxHeight: 50,
+        }}
         contentContainerStyle={{
           alignItems: "center",
           paddingVertical: spacing.space150,
@@ -609,19 +453,18 @@ export default function MenuScreen() {
             <TouchableOpacity
               key={category.id}
               onPress={() => setSelectedCategory(category.id as CategoryType)}
-              style={[
-                styles.categoryButton,
-                {
-                  backgroundColor: isSelected ? accent : colors.background.elevated,
-                  paddingVertical: spacing.space100,
-                  paddingHorizontal: spacing.space500,
-                  borderRadius: borderRadius.br70,
-                  marginRight: spacing.space300,
-                  borderWidth: borderWidth.bw20,
-                  borderColor: isSelected ? accent : colors.border.lighter,
-                  ...shadows.small,
-                },
-              ]}
+              style={{
+                backgroundColor: isSelected ? accent : colors.background.elevated,
+                paddingVertical: spacing.space100,
+                paddingHorizontal: spacing.space500,
+                borderRadius: borderRadius.br70,
+                marginRight: spacing.space300,
+                borderWidth: borderWidth.bw20,
+                borderColor: isSelected ? accent : colors.border.lighter,
+                flexDirection: 'row',
+                alignItems: 'center',
+                ...shadows.small,
+              }}
             >
               <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space100 }}>
                 {category.icon}
@@ -659,246 +502,76 @@ export default function MenuScreen() {
           {filteredMenu.length} {filteredMenu.length === 1 ? 'item' : 'items'}
         </Text>
       </View>
+    </>
+  );
 
-      {/* Menu Items - MINIMALISTIC DESIGN */}
-      <ScrollView
-        style={styles.menuScroll}
-        contentContainerStyle={{ padding: spacing.space400 }}
-      >
-        {filteredMenu.length === 0 ? (
-          <View
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
+      {/* Notification Toast */}
+      {notification && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 60,
+            left: spacing.space400,
+            right: spacing.space400,
+            backgroundColor: colors.action.positive,
+            padding: spacing.space400,
+            borderRadius: borderRadius.br50,
+            zIndex: zIndex.toast,
+            ...shadows.large,
+          }}
+        >
+          <Text
             style={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              paddingVertical: spacing.space1200,
+              color: colors.contrast.white,
+              fontSize: fontSize.fs400,
+              fontWeight: fontWeight.bold,
+              textAlign: 'center',
             }}
           >
-            <Text style={{ fontSize: 64, marginBottom: spacing.space400 }}>🔍</Text>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs700,
-                fontWeight: fontWeight.bold,
-                marginBottom: spacing.space150,
-              }}
-            >
-              No items found
-            </Text>
-            <Text
-              style={{
-                color: colors.foreground.tertiary,
-                fontSize: fontSize.fs200,
-                textAlign: 'center',
-              }}
-            >
-              Try adjusting your search or filters
-            </Text>
-          </View>
-        ) : (
-          filteredMenu.map((item) => {
-            const itemQuantity = cart[item.id] || 0;
-            const isInCart = itemQuantity > 0;
+            {notification}
+          </Text>
+        </View>
+      )}
 
-            return (
-              <View
-                key={item.id}
-                style={[
-                  styles.menuItem,
-                  {
-                    backgroundColor: colors.background.elevated,
-                    padding: spacing.space400,
-                    borderRadius: borderRadius.br50,
-                    marginBottom: spacing.space300,
-                    borderWidth: borderWidth.bw10,
-                    borderColor: isInCart ? accent : colors.border.subtle,
-                  },
-                ]}
-              >
-                {/* Top Row: Name, Rating, Badges */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.space200 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        color: colors.foreground.primary,
-                        fontSize: fontSize.fs500,
-                        fontWeight: fontWeight.bold,
-                      }}
-                    >
-                      {item.name}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.space100 }}>
-                      <Text style={{ fontSize: fontSize.fs100 }}>⭐</Text>
-                      <Text
-                        style={{
-                          color: colors.foreground.secondary,
-                          fontSize: fontSize.fs100,
-                          fontWeight: fontWeight.medium,
-                          marginLeft: spacing.space100,
-                        }}
-                      >
-                        {item.rating}
-                      </Text>
-                      <Text
-                        style={{
-                          color: colors.foreground.lighter,
-                          fontSize: fontSize.fs100,
-                          marginLeft: spacing.space100,
-                        }}
-                      >
-                        ({item.reviews})
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  {/* Mini Badges */}
-                  <View style={{ flexDirection: 'row', gap: spacing.space150 }}>
-                    {item.isPopular && <Text style={{ fontSize: fontSize.fs300 }}>🔥</Text>}
-                    {item.isNew && <Text style={{ fontSize: fontSize.fs300 }}>✨</Text>}
-                    {item.isVegetarian && <Text style={{ fontSize: fontSize.fs300 }}>🌱</Text>}
-                    {item.isSpicy && <Text style={{ fontSize: fontSize.fs300 }}>🌶️</Text>}
-                  </View>
-                </View>
+      {/* Header */}
+      <Header
+        title="La Tavola"
+        subtitle="Italian Fine Dining"
+        showThemeToggle={true}
+        showSearch={true}
+        showCart={true}
+        onSearchPress={() => setShowFilters(!showFilters)}
+        onCartPress={() => setShowCart(true)}
+        cartItemCount={getTotalItems()}
+      />
 
-                {/* Description */}
-                <Text
-                  style={{
-                    color: colors.foreground.tertiary,
-                    fontSize: fontSize.fs200,
-                    marginBottom: spacing.space300,
-                  }}
-                  numberOfLines={2}
-                >
-                  {item.description}
-                </Text>
-
-                {/* Bottom Row: Price and Add Button */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: accent,
-                      fontSize: fontSize.fs700,
-                      fontWeight: fontWeight.bold,
-                    }}
-                  >
-                    ${item.price.toFixed(2)}
-                  </Text>
-
-                  {isInCart ? (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: accentAlpha,
-                        paddingVertical: spacing.space150,
-                        paddingHorizontal: spacing.space300,
-                        borderRadius: borderRadius.br40,
-                        borderWidth: borderWidth.bw10,
-                        borderColor: accent,
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() => removeFromCart(item.id)}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: borderRadius.br40,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: accent,
-                            fontSize: fontSize.fs500,
-                            fontWeight: fontWeight.bold,
-                          }}
-                        >
-                          −
-                        </Text>
-                      </TouchableOpacity>
-
-                      <Text
-                        style={{
-                          color: foregroundAccent,
-                          fontSize: fontSize.fs400,
-                          fontWeight: fontWeight.bold,
-                          marginHorizontal: spacing.space300,
-                          minWidth: 20,
-                          textAlign: 'center',
-                        }}
-                      >
-                        {itemQuantity}
-                      </Text>
-
-                      <TouchableOpacity
-                        onPress={() => addToCart(item.id)}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: borderRadius.br40,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: accent,
-                            fontSize: fontSize.fs500,
-                            fontWeight: fontWeight.bold,
-                          }}
-                        >
-                          +
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => addToCart(item.id)}
-                      style={{
-                        backgroundColor: accent,
-                        paddingVertical: spacing.space200,
-                        paddingHorizontal: spacing.space500,
-                        borderRadius: borderRadius.br40,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: colors.contrast.white,
-                          fontSize: fontSize.fs300,
-                          fontWeight: fontWeight.bold,
-                        }}
-                      >
-                        Add
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+      {/* FlatList with Grid Layout */}
+      <FlatList
+        data={filteredMenu}
+        renderItem={renderMenuItem}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyState}
+        contentContainerStyle={{ padding: spacing.space400 }}
+        columnWrapperStyle={{ justifyContent: 'space-between' }}
+        showsVerticalScrollIndicator={false}
+      />
 
       {/* Cart Summary Footer */}
       {getTotalItems() > 0 && (
         <View
-          style={[
-            styles.cartSummary,
-            {
-              backgroundColor: colors.background.elevated,
-              padding: spacing.space400,
-              borderTopWidth: borderWidth.bw20,
-              borderTopColor: accent,
-              ...shadows.large,
-            },
-          ]}
+          style={{
+            backgroundColor: colors.background.elevated,
+            padding: spacing.space400,
+            borderTopWidth: borderWidth.bw20,
+            borderTopColor: accent,
+            flexDirection: 'row',
+            alignItems: 'center',
+            ...shadows.large,
+          }}
         >
           <View style={{ flex: 1 }}>
             <Text
@@ -932,16 +605,13 @@ export default function MenuScreen() {
 
           <TouchableOpacity
             onPress={() => setShowCart(true)}
-            style={[
-              styles.checkoutButton,
-              {
-                backgroundColor: accent,
-                paddingVertical: spacing.space400,
-                paddingHorizontal: spacing.space800,
-                borderRadius: borderRadius.br70,
-                ...shadows.medium,
-              },
-            ]}
+            style={{
+              backgroundColor: accent,
+              paddingVertical: spacing.space400,
+              paddingHorizontal: spacing.space800,
+              borderRadius: borderRadius.br70,
+              ...shadows.medium,
+            }}
           >
             <Text
               style={{
@@ -964,14 +634,11 @@ export default function MenuScreen() {
         onRequestClose={() => setShowCart(false)}
       >
         <View
-          style={[
-            styles.modalOverlay,
-            {
-              flex: 1,
-              backgroundColor: colors.state.primary.pressed,
-              justifyContent: 'flex-end',
-            },
-          ]}
+          style={{
+            flex: 1,
+            backgroundColor: colors.state.primary.pressed,
+            justifyContent: 'flex-end',
+          }}
         >
           <TouchableOpacity
             style={{ flex: 1 }}
@@ -979,17 +646,14 @@ export default function MenuScreen() {
             onPress={() => setShowCart(false)}
           />
           <View
-            style={[
-              styles.cartModal,
-              {
-                backgroundColor: colors.background.elevated,
-                borderTopLeftRadius: borderRadius.br90,
-                borderTopRightRadius: borderRadius.br90,
-                padding: spacing.space600,
-                maxHeight: '80%',
-                ...shadows.large,
-              },
-            ]}
+            style={{
+              backgroundColor: colors.background.elevated,
+              borderTopLeftRadius: borderRadius.br90,
+              borderTopRightRadius: borderRadius.br90,
+              padding: spacing.space600,
+              maxHeight: '80%',
+              ...shadows.large,
+            }}
           >
             {/* Modal Header */}
             <View
@@ -1353,46 +1017,4 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  notification: {},
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {},
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {},
-  cartButton: {},
-  cartBadge: {},
-  filterBar: {},
-  searchContainer: {},
-  sortOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  categoryScroll: {},
-  categoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuScroll: {
-    flex: 1,
-  },
-  menuItem: {},
-  badgesRow: {},
-  badge: {},
-  menuItemFooter: {},
-  quantityControls: {},
-  quantityButton: {},
-  addButton: {},
-  cartSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkoutButton: {},
-  modalOverlay: {},
-  cartModal: {},
 });
