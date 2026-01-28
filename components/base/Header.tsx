@@ -37,7 +37,6 @@ export default function Header({
   } = useTheme();
 
   const accent = colors.accent.CO;
-  const accentAlpha = colors.accent.COAlpha;
 
   return (
     <View

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Image, Animated, Easing } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 interface MenuItem {
@@ -35,9 +35,64 @@ export default function MenuItemCard({
   } = useTheme();
 
   const accent = colors.accent.CO;
-  const accentAlpha = colors.accent.COAlpha;
-  const foregroundAccent = colors.foreground.accentCO;
   const isInCart = quantity > 0;
+
+  // Multiple animations for a cool effect
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const previousQuantity = useRef(quantity);
+
+  useEffect(() => {
+    if (quantity !== previousQuantity.current && quantity > 0) {
+      const isIncreasing = quantity > previousQuantity.current;
+      
+      // Reset all animations
+      slideAnim.setValue(isIncreasing ? 30 : -30);
+      scaleAnim.setValue(0);
+      rotateAnim.setValue(isIncreasing ? 1 : -1);
+      opacityAnim.setValue(0);
+      
+      // Run complex parallel and sequence animations
+      Animated.parallel([
+        // Slide in from top/bottom
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        // Scale up with bounce
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 150,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+        // Rotate while coming in
+        Animated.timing(rotateAnim, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.elastic(1.2),
+          useNativeDriver: true,
+        }),
+        // Fade in
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
+      previousQuantity.current = quantity;
+    }
+  }, [quantity]);
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-15deg', '0deg', '15deg'],
+  });
 
   return (
     <View
@@ -127,100 +182,124 @@ export default function MenuItemCard({
         <Text
           style={{
             color: accent,
-            fontSize: fontSize.fs700,
+            fontSize: fontSize.fs400,
             fontWeight: fontWeight.bold,
+            flex: 0,
+            marginRight: spacing.space200,
           }}
         >
           ${item.price.toFixed(2)}
         </Text>
 
-        {isInCart ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: accentAlpha,
-              paddingVertical: spacing.space150,
-              paddingHorizontal: spacing.space250,
-              borderRadius: borderRadius.br40,
-              borderWidth: borderWidth.bw10,
-              borderColor: accent,
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => onRemove(item.id)}
-              style={{
-                width: 24,
-                height: 24,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Text
+        {/* Single Button Container */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: accent,
+            paddingVertical: spacing.space100,
+            paddingHorizontal: spacing.space150,
+            borderRadius: borderRadius.br40,
+            minWidth: 84,
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {isInCart ? (
+            <>
+              <TouchableOpacity
+                onPress={() => onRemove(item.id)}
                 style={{
-                  color: accent,
-                  fontSize: fontSize.fs500,
-                  fontWeight: fontWeight.bold,
+                  backgroundColor: colors.background.elevated,
+                  width: 20,
+                  height: 20,
+                  borderRadius: borderRadius.br40,
+                  justifyContent: 'center',
+                  alignItems: 'center',
                 }}
               >
-                −
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{
+                    color: accent,
+                    fontSize: fontSize.fs300,
+                    fontWeight: fontWeight.bold,
+                  }}
+                >
+                  −
+                </Text>
+              </TouchableOpacity>
 
-            <Text
-              style={{
-                color: foregroundAccent,
-                fontSize: fontSize.fs400,
-                fontWeight: fontWeight.bold,
-                marginHorizontal: spacing.space300,
-                minWidth: 20,
-                textAlign: 'center',
-              }}
-            >
-              {quantity}
-            </Text>
+              <View
+                style={{
+                  marginHorizontal: spacing.space200,
+                  width: 20,
+                  height: 20,
+                  overflow: 'hidden',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Animated.Text
+                  style={{
+                    color: colors.contrast.white,
+                    fontSize: fontSize.fs300,
+                    fontWeight: fontWeight.bold,
+                    textAlign: 'center',
+                    transform: [
+                      { translateY: slideAnim },
+                      { scale: scaleAnim },
+                      { rotate: rotate },
+                    ],
+                    opacity: opacityAnim,
+                  }}
+                >
+                  {quantity}
+                </Animated.Text>
+              </View>
 
+              <TouchableOpacity
+                onPress={() => onAdd(item.id)}
+                style={{
+                  backgroundColor: colors.background.elevated,
+                  width: 20,
+                  height: 20,
+                  borderRadius: borderRadius.br40,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: accent,
+                    fontSize: fontSize.fs300,
+                    fontWeight: fontWeight.bold,
+                  }}
+                >
+                  +
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
             <TouchableOpacity
               onPress={() => onAdd(item.id)}
               style={{
-                width: 24,
-                height: 24,
+                flex: 1,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
             >
               <Text
                 style={{
-                  color: accent,
-                  fontSize: fontSize.fs500,
+                  color: colors.contrast.white,
+                  fontSize: fontSize.fs300,
                   fontWeight: fontWeight.bold,
                 }}
               >
-                +
+                Add
               </Text>
             </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={() => onAdd(item.id)}
-            style={{
-              backgroundColor: accent,
-              paddingVertical: spacing.space200,
-              paddingHorizontal: spacing.space500,
-              borderRadius: borderRadius.br40,
-            }}
-          >
-            <Text
-              style={{
-                color: colors.contrast.white,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.bold,
-              }}
-            >
-              Add
-            </Text>
-          </TouchableOpacity>
-        )}
+          )}
+        </View>
       </View>
     </View>
   );

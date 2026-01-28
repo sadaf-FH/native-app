@@ -11,7 +11,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      key={isDark ? 'dark' : 'light'} // Force re-mount on theme change
+      key={isDark ? 'dark' : 'light'} 
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: accent,
