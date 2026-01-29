@@ -1,30 +1,25 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { createResultsCountStyles } from './styles/ResultsCount.styles';
 
 interface ResultsCountProps {
   count: number;
 }
 
 export default function ResultsCount({ count }: ResultsCountProps) {
-  const { colors, spacing, fontSize, borderWidth } = useTheme();
+  const theme = useTheme();
+
+  const styles = createResultsCountStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    borderWidth: theme.borderWidth,
+  });
 
   return (
-    <View
-      style={{
-        backgroundColor: colors.background.light,
-        padding: spacing.space300,
-        paddingHorizontal: spacing.space400,
-        borderBottomWidth: borderWidth.bw10,
-        borderBottomColor: colors.border.lighter,
-      }}
-    >
-      <Text
-        style={{
-          color: colors.foreground.secondary,
-          fontSize: fontSize.fs200,
-        }}
-      >
+    <View style={styles.container}>
+      <Text style={styles.countText}>
         {count} {count === 1 ? 'item' : 'items'}
       </Text>
     </View>

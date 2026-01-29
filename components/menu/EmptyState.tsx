@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { createEmptyStateStyles } from './styles/EmptyState.styles';
 
 interface EmptyStateProps {
   icon: string;
@@ -9,37 +10,20 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
-  const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const theme = useTheme();
+
+  const styles = createEmptyStateStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    fontWeight: theme.fontWeight,
+  });
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: spacing.space1200,
-      }}
-    >
-      <Text style={{ fontSize: 64, marginBottom: spacing.space400 }}>{icon}</Text>
-      <Text
-        style={{
-          color: colors.foreground.primary,
-          fontSize: fontSize.fs700,
-          fontWeight: fontWeight.bold,
-          marginBottom: spacing.space150,
-        }}
-      >
-        {title}
-      </Text>
-      <Text
-        style={{
-          color: colors.foreground.tertiary,
-          fontSize: fontSize.fs200,
-          textAlign: 'center',
-        }}
-      >
-        {subtitle}
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.icon}>{icon}</Text>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
     </View>
   );
 }

@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
-import {
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-} from 'react-native';
-import { useToast } from 'expo-toast';
+import { FlatList, SafeAreaView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { useToast } from '@/hooks/useToast';
 import Header from '@/components/base/Header';
 import MenuItemCard from '@/components/base/Card';
 import SearchFilterBar from '@/components/menu/SearchFilterBar';
@@ -14,6 +10,7 @@ import ResultsCount from '@/components/menu/ResultsCount';
 import CartSummaryFooter from '@/components/menu/CartSummaryFooter';
 import CartModal from '@/components/menu/CartModal';
 import EmptyState from '@/components/menu/EmptyState';
+import { createMenuScreenStyles } from './styles/Menu.styles';
 
 interface MenuItem {
   id: string;
@@ -74,7 +71,7 @@ const MENU_DATA: MenuItem[] = [
     isPopular: true,
     rating: 4.9,
     reviews: 315,
-    image: require('@/assets/images/griller-salmon.jpg')
+    image: require('@/assets/images/griller-salmon.jpg'),
   },
   {
     id: '5',
@@ -85,7 +82,7 @@ const MENU_DATA: MenuItem[] = [
     isSpicy: true,
     rating: 4.6,
     reviews: 187,
-    image: require('@/assets/images/chicken-curry.jpg')
+    image: require('@/assets/images/chicken-curry.jpg'),
   },
   {
     id: '6',
@@ -97,7 +94,7 @@ const MENU_DATA: MenuItem[] = [
     isPopular: true,
     rating: 4.7,
     reviews: 421,
-    image: require('@/assets/images/pizza.jpg')
+    image: require('@/assets/images/pizza.jpg'),
   },
   {
     id: '9',
@@ -108,7 +105,7 @@ const MENU_DATA: MenuItem[] = [
     isPopular: true,
     rating: 4.8,
     reviews: 267,
-    image: require('@/assets/images/tiramisu.jpg')
+    image: require('@/assets/images/tiramisu.jpg'),
   },
   {
     id: '10',
@@ -118,7 +115,7 @@ const MENU_DATA: MenuItem[] = [
     category: 'dessert',
     rating: 4.7,
     reviews: 198,
-    image: require('@/assets/images/choco.jpg')
+    image: require('@/assets/images/choco.jpg'),
   },
   {
     id: '12',
@@ -128,7 +125,7 @@ const MENU_DATA: MenuItem[] = [
     category: 'beverage',
     rating: 4.4,
     reviews: 523,
-    image: require('@/assets/images/espresso.jpg')
+    image: require('@/assets/images/espresso.jpg'),
   },
   {
     id: '13',
@@ -139,16 +136,21 @@ const MENU_DATA: MenuItem[] = [
     isNew: true,
     rating: 4.6,
     reviews: 78,
-    image: require('@/assets/images/lemonade.jpg')
-  }
+    image: require('@/assets/images/lemonade.jpg'),
+  },
 ];
 
 type CategoryType = 'all' | 'appetizer' | 'main' | 'dessert' | 'beverage';
 type SortType = 'default' | 'price-low' | 'price-high' | 'rating';
 
 export default function MenuScreen() {
-  const { colors, spacing } = useTheme();
+  const theme = useTheme();
   const toast = useToast();
+
+  const styles = createMenuScreenStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+  });
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [cart, setCart] = useState<{ [key: string]: number }>({});
@@ -205,7 +207,7 @@ export default function MenuScreen() {
       ...prev,
       [itemId]: (prev[itemId] || 0) + 1,
     }));
-    toast.show('Added to cart! 🛒', { duration: 2000 });
+    toast.show('Added to cart! 🛒', 'success');
   };
 
   const removeFromCart = (itemId: string) => {
@@ -223,7 +225,7 @@ export default function MenuScreen() {
   const clearCart = () => {
     setCart({});
     setShowCart(false);
-    toast.show('Cart cleared', { duration: 2000 });
+    toast.show('Cart cleared', 'info');
   };
 
   const getTotalPrice = () => {
@@ -239,7 +241,7 @@ export default function MenuScreen() {
 
   const handlePlaceOrder = () => {
     setShowCart(false);
-    toast.show('Order placed successfully! 🎉', { duration: 2000 });
+    toast.show('Order placed successfully! 🎉', 'success');
     setTimeout(() => setCart({}), 500);
   };
 
@@ -276,7 +278,7 @@ export default function MenuScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       <Header
         title="La Tavola"
         subtitle="Italian Fine Dining"
@@ -295,14 +297,10 @@ export default function MenuScreen() {
         numColumns={2}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
-          <EmptyState
-            icon="🔍"
-            title="No items found"
-            subtitle="Try adjusting your search or filters"
-          />
+          <EmptyState icon="🔍" title="No items found" subtitle="Try adjusting your search or filters" />
         }
-        contentContainerStyle={{ padding: spacing.space400 }}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={styles.columnWrapper}
         showsVerticalScrollIndicator={false}
       />
 
@@ -327,9 +325,3 @@ export default function MenuScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

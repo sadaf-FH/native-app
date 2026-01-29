@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   TextInput, 
   TouchableOpacity, 
   SafeAreaView, 
@@ -12,21 +11,24 @@ import {
 import { useTheme } from '@/hooks/useTheme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { registerUser } from '@/store/slices/userSlice';
+import { createRegisterScreenStyles } from './styles/Register.styles';
 
 export default function RegisterScreen() {
-  const { 
-    colors, 
-    spacing, 
-    fontSize, 
-    fontWeight, 
-    borderRadius, 
-    borderWidth, 
-    shadows 
-  } = useTheme();
-  
-  const accent = colors.accent.CO;
+  const theme = useTheme();
+  const accent = theme.colors.accent.CO;
   const dispatch = useAppDispatch();
   const isLoading = useAppSelector((state) => state.user.isLoading);
+
+  const styles = createRegisterScreenStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    fontWeight: theme.fontWeight,
+    borderRadius: theme.borderRadius,
+    borderWidth: theme.borderWidth,
+    shadows: theme.shadows,
+    accent,
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -71,58 +73,27 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
-      <ScrollView contentContainerStyle={{ padding: spacing.space400 }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
-        <View style={{ alignItems: 'center', marginTop: spacing.space800, marginBottom: spacing.space800 }}>
-          <Text style={{ fontSize: 64, marginBottom: spacing.space400 }}>👤</Text>
-          <Text
-            style={{
-              color: accent,
-              fontSize: fontSize.fs1100,
-              fontWeight: fontWeight.bold,
-              marginBottom: spacing.space150,
-            }}
-          >
-            Create Account
-          </Text>
-          <Text
-            style={{
-              color: colors.foreground.tertiary,
-              fontSize: fontSize.fs300,
-              textAlign: 'center',
-            }}
-          >
-            Sign up to get started
-          </Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerIcon}>👤</Text>
+          <Text style={styles.headerTitle}>Create Account</Text>
+          <Text style={styles.headerSubtitle}>Sign up to get started</Text>
         </View>
 
         {/* Form */}
-        <View style={{ gap: spacing.space400 }}>
+        <View style={styles.formContainer}>
           {/* Name Input */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.medium,
-                marginBottom: spacing.space200,
-              }}
-            >
-              Full Name *
-            </Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Full Name *</Text>
             <TextInput
-              style={{
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: errors.name ? colors.border.negative : colors.border.subtle,
-              }}
+              style={[
+                styles.textInput,
+                errors.name ? styles.textInputError : styles.textInputNormal,
+              ]}
               placeholder="Enter your name"
-              placeholderTextColor={colors.foreground.lighter}
+              placeholderTextColor={theme.colors.foreground.lighter}
               value={formData.name}
               onChangeText={(name) => {
                 setFormData({ ...formData, name });
@@ -130,43 +101,19 @@ export default function RegisterScreen() {
               }}
               editable={!isLoading}
             />
-            {errors.name ? (
-              <Text
-                style={{
-                  color: colors.foreground.negative,
-                  fontSize: fontSize.fs200,
-                  marginTop: spacing.space150,
-                }}
-              >
-                {errors.name}
-              </Text>
-            ) : null}
+            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
           </View>
 
           {/* Email Input */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.medium,
-                marginBottom: spacing.space200,
-              }}
-            >
-              Email *
-            </Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email *</Text>
             <TextInput
-              style={{
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: errors.email ? colors.border.negative : colors.border.subtle,
-              }}
+              style={[
+                styles.textInput,
+                errors.email ? styles.textInputError : styles.textInputNormal,
+              ]}
               placeholder="Enter your email"
-              placeholderTextColor={colors.foreground.lighter}
+              placeholderTextColor={theme.colors.foreground.lighter}
               value={formData.email}
               onChangeText={(email) => {
                 setFormData({ ...formData, email });
@@ -176,43 +123,16 @@ export default function RegisterScreen() {
               autoCapitalize="none"
               editable={!isLoading}
             />
-            {errors.email ? (
-              <Text
-                style={{
-                  color: colors.foreground.negative,
-                  fontSize: fontSize.fs200,
-                  marginTop: spacing.space150,
-                }}
-              >
-                {errors.email}
-              </Text>
-            ) : null}
+            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
           </View>
 
           {/* Phone Input (Optional) */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.medium,
-                marginBottom: spacing.space200,
-              }}
-            >
-              Phone (Optional)
-            </Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Phone (Optional)</Text>
             <TextInput
-              style={{
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: colors.border.subtle,
-              }}
+              style={[styles.textInput, styles.textInputNormal]}
               placeholder="Enter your phone number"
-              placeholderTextColor={colors.foreground.lighter}
+              placeholderTextColor={theme.colors.foreground.lighter}
               value={formData.phone}
               onChangeText={(phone) => setFormData({ ...formData, phone })}
               keyboardType="phone-pad"
@@ -224,53 +144,28 @@ export default function RegisterScreen() {
           <TouchableOpacity
             onPress={handleRegister}
             disabled={isLoading}
-            style={{
-              backgroundColor: isLoading ? colors.background.secondary : accent,
-              padding: spacing.space400,
-              borderRadius: borderRadius.br50,
-              alignItems: 'center',
-              marginTop: spacing.space400,
-              ...shadows.medium,
-              flexDirection: 'row',
-              justifyContent: 'center',
-            }}
+            style={[
+              styles.registerButton,
+              isLoading ? styles.registerButtonDisabled : styles.registerButtonActive,
+            ]}
           >
             {isLoading && (
               <ActivityIndicator 
-                color={colors.contrast.white} 
-                style={{ marginRight: spacing.space300 }} 
+                color={theme.colors.contrast.white} 
+                style={styles.loadingIndicator} 
               />
             )}
-            <Text
-              style={{
-                color: colors.contrast.white,
-                fontSize: fontSize.fs500,
-                fontWeight: fontWeight.bold,
-              }}
-            >
+            <Text style={styles.registerButtonText}>
               {isLoading ? 'Registering...' : 'Register'}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Info Text */}
-        <Text
-          style={{
-            color: colors.foreground.tertiary,
-            fontSize: fontSize.fs200,
-            textAlign: 'center',
-            marginTop: spacing.space800,
-          }}
-        >
+        <Text style={styles.infoText}>
           Note: Your profile will reset when you close the app
         </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

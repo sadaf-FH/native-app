@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { createCartSummaryFooterStyles } from './styles/CartSummary.styles';
 
 interface CartSummaryFooterProps {
   totalItems: number;
@@ -13,72 +14,33 @@ export default function CartSummaryFooter({
   totalPrice,
   onViewCart,
 }: CartSummaryFooterProps) {
-  const { colors, spacing, fontSize, fontWeight, borderRadius, borderWidth, shadows } = useTheme();
-  const accent = colors.accent.CO;
+  const theme = useTheme();
+  const accent = theme.colors.accent.CO;
+
+  const styles = createCartSummaryFooterStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    fontWeight: theme.fontWeight,
+    borderRadius: theme.borderRadius,
+    borderWidth: theme.borderWidth,
+    shadows: theme.shadows,
+    accent,
+  });
 
   if (totalItems === 0) return null;
 
   return (
-    <View
-      style={{
-        backgroundColor: colors.background.elevated,
-        padding: spacing.space400,
-        borderTopWidth: borderWidth.bw20,
-        borderTopColor: accent,
-        flexDirection: 'row',
-        alignItems: 'center',
-        ...shadows.large,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: colors.foreground.light,
-            fontSize: fontSize.fs100,
-          }}
-        >
-          Subtotal
-        </Text>
-        <Text
-          style={{
-            color: colors.foreground.secondary,
-            fontSize: fontSize.fs200,
-            marginTop: spacing.space150,
-          }}
-        >
+    <View style={styles.container}>
+      <View style={styles.infoContainer}>
+        <Text style={styles.itemsText}>
           {totalItems} {totalItems === 1 ? 'item' : 'items'}
         </Text>
-        <Text
-          style={{
-            color: colors.foreground.primary,
-            fontSize: fontSize.fs900,
-            fontWeight: fontWeight.bold,
-            marginTop: spacing.space150,
-          }}
-        >
-          ${Math.round(totalPrice)}
-        </Text>
+        <Text style={styles.totalPriceText}>${totalPrice}</Text>
       </View>
 
-      <TouchableOpacity
-        onPress={onViewCart}
-        style={{
-          backgroundColor: accent,
-          paddingVertical: spacing.space400,
-          paddingHorizontal: spacing.space800,
-          borderRadius: borderRadius.br70,
-          ...shadows.medium,
-        }}
-      >
-        <Text
-          style={{
-            color: colors.contrast.white,
-            fontSize: fontSize.fs400,
-            fontWeight: fontWeight.bold,
-          }}
-        >
-          View Cart →
-        </Text>
+      <TouchableOpacity onPress={onViewCart} style={styles.viewCartButton}>
+        <Text style={styles.viewCartButtonText}>View Cart →</Text>
       </TouchableOpacity>
     </View>
   );

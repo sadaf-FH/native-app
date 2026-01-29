@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { createCategoryFilterStyles } from './styles/CategoryFilter.styles';
 
 type CategoryType = 'all' | 'appetizer' | 'main' | 'dessert' | 'beverage';
 
@@ -21,24 +22,26 @@ export default function CategoryFilter({
   selectedCategory,
   setSelectedCategory,
 }: CategoryFilterProps) {
-  const { colors, spacing, fontSize, fontWeight, borderRadius, borderWidth, shadows } = useTheme();
-  const accent = colors.accent.CO;
+  const theme = useTheme();
+  const accent = theme.colors.accent.CO;
+
+  const styles = createCategoryFilterStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    fontWeight: theme.fontWeight,
+    borderRadius: theme.borderRadius,
+    borderWidth: theme.borderWidth,
+    shadows: theme.shadows,
+    accent,
+  });
 
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={{
-        backgroundColor: colors.background.tertiary,
-        borderBottomWidth: borderWidth.bw10,
-        borderBottomColor: colors.border.lighter,
-        maxHeight: 50,
-      }}
-      contentContainerStyle={{
-        alignItems: 'center',
-        paddingVertical: spacing.space150,
-        paddingHorizontal: spacing.space400,
-      }}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
     >
       {categories.map((category) => {
         const isSelected = selectedCategory === category.id;
@@ -46,28 +49,17 @@ export default function CategoryFilter({
           <TouchableOpacity
             key={category.id}
             onPress={() => setSelectedCategory(category.id as CategoryType)}
-            style={{
-              backgroundColor: isSelected ? accent : colors.background.elevated,
-              paddingVertical: spacing.space100,
-              paddingHorizontal: spacing.space500,
-              borderRadius: borderRadius.br70,
-              marginRight: spacing.space300,
-              borderWidth: borderWidth.bw20,
-              borderColor: isSelected ? accent : colors.border.lighter,
-              flexDirection: 'row',
-              alignItems: 'center',
-              ...shadows.small,
-            }}
+            style={[
+              styles.categoryButton,
+              isSelected ? styles.categoryButtonSelected : styles.categoryButtonUnselected,
+            ]}
           >
-            <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space100 }}>
-              {category.icon}
-            </Text>
+            <Text style={styles.categoryIcon}>{category.icon}</Text>
             <Text
-              style={{
-                color: isSelected ? colors.contrast.white : colors.foreground.primary,
-                fontSize: fontSize.fs200,
-                fontWeight: isSelected ? fontWeight.bold : fontWeight.medium,
-              }}
+              style={[
+                styles.categoryLabel,
+                isSelected ? styles.categoryLabelSelected : styles.categoryLabelUnselected,
+              ]}
             >
               {category.label}
             </Text>
