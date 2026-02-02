@@ -4,7 +4,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAppSelector } from '@/store/hooks';
 
 export default function TabLayout() {
-  // Listen to Redux theme to force re-render
   const isDark = useAppSelector((state) => state.theme.isDark);
   const { colors, fontSize } = useTheme();
   const accent = colors.accent.CO;

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { FlatList, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { FlatList, SafeAreaView, View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/useToast';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchMenuByRestaurant } from '@/store/slices/menuSlice';
 import Header from '@/components/base/Header';
 import MenuItemCard from '@/components/base/Card';
 import SearchFilterBar from '@/components/menu/SearchFilterBar';
@@ -11,6 +13,13 @@ import CartSummaryFooter from '@/components/menu/CartSummaryFooter';
 import CartModal from '@/components/menu/CartModal';
 import EmptyState from '@/components/menu/EmptyState';
 import { createMenuScreenStyles } from './styles/Menu.styles';
+
+const PLACEHOLDER_IMAGES = {
+  Appetizers: require('@/assets/images/bruschetta.jpeg'),
+  Mains: require('@/assets/images/pizza.jpg'),
+  Desserts: require('@/assets/images/tiramisu.jpg'),
+  Beverages: require('@/assets/images/espresso.jpg'),
+};
 
 interface MenuItem {
   id: string;
@@ -25,127 +34,22 @@ interface MenuItem {
   rating: number;
   reviews: number;
   image?: any;
+  isAvailable?: boolean;
+  originalPrice?: number;
+  discount?: number;
 }
 
-const MENU_DATA: MenuItem[] = [
-  {
-    id: '1',
-    name: 'Bruschetta',
-    description: 'Toasted bread topped with fresh tomatoes, garlic, basil, and olive oil',
-    price: 9,
-    category: 'appetizer',
-    isVegetarian: true,
-    isPopular: true,
-    rating: 4.5,
-    reviews: 128,
-    image: require('@/assets/images/bruschetta.jpeg'),
-  },
-  {
-    id: '2',
-    name: 'Calamari Fritti',
-    description: 'Crispy fried squid served with marinara sauce and lemon',
-    price: 13,
-    category: 'appetizer',
-    isNew: true,
-    rating: 4.8,
-    reviews: 45,
-    image: require('@/assets/images/calamari.jpg'),
-  },
-  {
-    id: '3',
-    name: 'Caesar Salad',
-    description: 'Romaine lettuce, parmesan cheese, croutons, and Caesar dressing',
-    price: 10,
-    category: 'appetizer',
-    isVegetarian: true,
-    rating: 4.2,
-    reviews: 203,
-    image: require('@/assets/images/caesar-salad.jpg'),
-  },
-  {
-    id: '4',
-    name: 'Grilled Salmon',
-    description: 'Fresh Atlantic salmon with roasted vegetables and lemon butter sauce',
-    price: 25,
-    category: 'main',
-    isPopular: true,
-    rating: 4.9,
-    reviews: 315,
-    image: require('@/assets/images/griller-salmon.jpg'),
-  },
-  {
-    id: '5',
-    name: 'Spicy Chicken Curry',
-    description: 'Tender chicken in aromatic curry sauce with basmati rice',
-    price: 19,
-    category: 'main',
-    isSpicy: true,
-    rating: 4.6,
-    reviews: 187,
-    image: require('@/assets/images/chicken-curry.jpg'),
-  },
-  {
-    id: '6',
-    name: 'Margherita Pizza',
-    description: 'Classic pizza with tomato sauce, mozzarella, and fresh basil',
-    price: 17,
-    category: 'main',
-    isVegetarian: true,
-    isPopular: true,
-    rating: 4.7,
-    reviews: 421,
-    image: require('@/assets/images/pizza.jpg'),
-  },
-  {
-    id: '9',
-    name: 'Tiramisu',
-    description: 'Classic Italian dessert with coffee-soaked ladyfingers and mascarpone',
-    price: 8,
-    category: 'dessert',
-    isPopular: true,
-    rating: 4.8,
-    reviews: 267,
-    image: require('@/assets/images/tiramisu.jpg'),
-  },
-  {
-    id: '10',
-    name: 'Chocolate Lava Cake',
-    description: 'Warm chocolate cake with molten center, served with vanilla ice cream',
-    price: 9,
-    category: 'dessert',
-    rating: 4.7,
-    reviews: 198,
-    image: require('@/assets/images/choco.jpg'),
-  },
-  {
-    id: '12',
-    name: 'Espresso',
-    description: 'Rich Italian espresso',
-    price: 4,
-    category: 'beverage',
-    rating: 4.4,
-    reviews: 523,
-    image: require('@/assets/images/espresso.jpg'),
-  },
-  {
-    id: '13',
-    name: 'Fresh Lemonade',
-    description: 'Homemade lemonade with mint',
-    price: 5,
-    category: 'beverage',
-    isNew: true,
-    rating: 4.6,
-    reviews: 78,
-    image: require('@/assets/images/lemonade.jpg'),
-  },
-];
-
-type CategoryType = 'all' | 'appetizer' | 'main' | 'dessert' | 'beverage';
-type SortType = 'default' | 'price-low' | 'price-high' | 'rating';
+type CategoryType = 'all' | 'Appetizers' | 'Mains' | 'Desserts' | 'Beverages';
+type SortType = 'default' | 'price-low' | 'price-high';
 
 export default function MenuScreen() {
   const theme = useTheme();
+  const accent = theme.colors.accent.CO;
   const toast = useToast();
+  const dispatch = useAppDispatch();
+
+  const restaurant = useAppSelector((state) => state.restaurant.restaurant);
+  const { menu, isLoading } = useAppSelector((state) => state.menu);
 
   const styles = createMenuScreenStyles({
     colors: theme.colors,
@@ -159,26 +63,104 @@ export default function MenuScreen() {
   const [sortBy, setSortBy] = useState<SortType>('default');
   const [showCart, setShowCart] = useState(false);
 
+  useEffect(() => {
+    if (restaurant) {
+      dispatch(fetchMenuByRestaurant(restaurant.R_ID));
+    }
+  }, [restaurant]);
+
+  useEffect(() => {
+    if (restaurant) {
+      const interval = setInterval(() => {
+        dispatch(fetchMenuByRestaurant(restaurant.R_ID));
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [restaurant]);
+
+  const convertToDisplayMenu = (): MenuItem[] => {
+    if (!menu || !menu.Categories) return [];
+
+    const items: MenuItem[] = [];
+
+    menu.Categories.forEach((category) => {
+      category.Items?.forEach((item) => {
+        const price = item.ItemPrices?.[0];
+        const basePrice = price?.base_price || price?.price || 0;
+        const finalPrice = price?.final_price || basePrice;
+        const discount = price?.discount || 0;
+
+        const categoryMap: Record<string, 'appetizer' | 'main' | 'dessert' | 'beverage'> = {
+          'Appetizers': 'appetizer',
+          'Mains': 'main',
+          'Desserts': 'dessert',
+          'Beverages': 'beverage',
+        };
+
+        const itemImage = item.image_base64 
+          ? { uri: item.image_base64 }
+          : PLACEHOLDER_IMAGES[category.name as keyof typeof PLACEHOLDER_IMAGES] || PLACEHOLDER_IMAGES.Mains;
+
+        items.push({
+          id: item.item_id,
+          name: item.name,
+          description: `Delicious ${item.name}`,
+          price: finalPrice,
+          originalPrice: discount > 0 ? basePrice : undefined,
+          discount: discount > 0 ? discount : undefined,
+          category: categoryMap[category.name] || 'main',
+          isAvailable: item.dataValues?.is_available_now !== false,
+          isVegetarian: false,
+          isSpicy: false,
+          isPopular: false,
+          isNew: false,
+          rating: 4.5,
+          reviews: Math.floor(Math.random() * 200) + 50,
+          image: itemImage,
+        });
+      });
+    });
+
+    return items;
+  };
+
+  const displayMenu = convertToDisplayMenu();
+
   const categories = [
-    { id: 'all', label: 'All', icon: '🍽️' },
-    { id: 'appetizer', label: 'Appetizers', icon: '🥗' },
-    { id: 'main', label: 'Mains', icon: '🍝' },
-    { id: 'dessert', label: 'Desserts', icon: '🍰' },
-    { id: 'beverage', label: 'Beverages', icon: '🍷' },
+    { id: 'all' as CategoryType, label: 'All', icon: '🍽️' },
+    ...(menu?.Categories?.map((cat) => ({
+      id: cat.name as CategoryType,
+      label: cat.name,
+      icon: cat.name === 'Appetizers' ? '🥗' :
+            cat.name === 'Mains' ? '🍝' :
+            cat.name === 'Desserts' ? '🍰' :
+            cat.name === 'Beverages' ? '🍷' : '🍽️',
+    })) || []),
   ];
 
   const sortOptions = [
-    { id: 'default', label: 'Default', icon: '📋' },
-    { id: 'price-low', label: 'Price: Low to High', icon: '💰' },
-    { id: 'price-high', label: 'Price: High to Low', icon: '💎' },
-    { id: 'rating', label: 'Top Rated', icon: '⭐' },
+    { id: 'default' as SortType, label: 'Default', icon: '📋' },
+    { id: 'price-low' as SortType, label: 'Price: Low to High', icon: '💰' },
+    { id: 'price-high' as SortType, label: 'Price: High to Low', icon: '💎' },
   ];
 
   const getFilteredAndSortedMenu = () => {
-    let filtered =
-      selectedCategory === 'all'
-        ? MENU_DATA
-        : MENU_DATA.filter((item) => item.category === selectedCategory);
+    let filtered = displayMenu;
+
+    if (selectedCategory !== 'all') {
+      const backendCategoryMap: Record<CategoryType, string> = {
+        'all': '',
+        'Appetizers': 'appetizer',
+        'Mains': 'main',
+        'Desserts': 'dessert',
+        'Beverages': 'beverage',
+      };
+      
+      const frontendCategory = backendCategoryMap[selectedCategory];
+      if (frontendCategory) {
+        filtered = displayMenu.filter((item) => item.category === frontendCategory);
+      }
+    }
 
     if (searchQuery) {
       filtered = filtered.filter(
@@ -193,8 +175,6 @@ export default function MenuScreen() {
         return [...filtered].sort((a, b) => a.price - b.price);
       case 'price-high':
         return [...filtered].sort((a, b) => b.price - a.price);
-      case 'rating':
-        return [...filtered].sort((a, b) => b.rating - a.rating);
       default:
         return filtered;
     }
@@ -230,7 +210,7 @@ export default function MenuScreen() {
 
   const getTotalPrice = () => {
     return Object.entries(cart).reduce((total, [itemId, quantity]) => {
-      const item = MENU_DATA.find((i) => i.id === itemId);
+      const item = displayMenu.find((i) => i.id === itemId);
       return total + (item?.price || 0) * quantity;
     }, 0);
   };
@@ -277,11 +257,35 @@ export default function MenuScreen() {
     </>
   );
 
+  if (isLoading && !menu) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+        <Header
+          title={restaurant?.name || "La Tavola"}
+          subtitle={restaurant?.location || "Loading..."}
+          showThemeToggle={true}
+          showSearch={false}
+          showCart={false}
+        />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={accent} />
+          <Text style={{ 
+            color: theme.colors.foreground.secondary, 
+            marginTop: theme.spacing.space400,
+            fontSize: theme.fontSize.fs300 
+          }}>
+            Loading menu...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       <Header
-        title="La Tavola"
-        subtitle="Italian Fine Dining"
+        title={restaurant?.name || "La Tavola"}
+        subtitle={restaurant?.location || "Fine Dining"}
         showThemeToggle={true}
         showSearch={true}
         showCart={true}
@@ -297,18 +301,24 @@ export default function MenuScreen() {
         numColumns={2}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
-          <EmptyState icon="🔍" title="No items found" subtitle="Try adjusting your search or filters" />
+          <EmptyState
+            icon="📋"
+            title="No menu items yet"
+            subtitle="Items added in Admin will appear here"
+          />
         }
         contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.columnWrapper}
+        columnWrapperStyle={filteredMenu.length > 0 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
       />
 
-      <CartSummaryFooter
-        totalItems={getTotalItems()}
-        totalPrice={getTotalPrice()}
-        onViewCart={() => setShowCart(true)}
-      />
+      {getTotalItems() > 0 && (
+        <CartSummaryFooter
+          totalItems={getTotalItems()}
+          totalPrice={getTotalPrice()}
+          onViewCart={() => setShowCart(true)}
+        />
+      )}
 
       <CartModal
         visible={showCart}
@@ -318,7 +328,7 @@ export default function MenuScreen() {
         onPlaceOrder={handlePlaceOrder}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
-        menuData={MENU_DATA}
+        menuData={displayMenu}
         getTotalPrice={getTotalPrice}
         getTotalItems={getTotalItems}
       />

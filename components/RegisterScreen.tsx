@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -10,14 +10,20 @@ import {
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { registerUser } from '@/store/slices/userSlice';
+import { createRestaurant } from '@/store/slices/restaurantSlice';
+import { createMenu } from '@/store/slices/menuSlice';
 import { createRegisterScreenStyles } from './styles/Register.styles';
+import { useToast } from '@/hooks/useToast';
+import { useRouter } from 'expo-router';
 
 export default function RegisterScreen() {
   const theme = useTheme();
   const accent = theme.colors.accent.CO;
   const dispatch = useAppDispatch();
-  const isLoading = useAppSelector((state) => state.user.isLoading);
+  const toast = useToast();
+  const router = useRouter();
+  
+  const { restaurant, isLoading, error } = useAppSelector((state) => state.restaurant);
 
   const styles = createRegisterScreenStyles({
     colors: theme.colors,
@@ -32,29 +38,35 @@ export default function RegisterScreen() {
 
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    phone: '',
+    franchise: '',
+    location: '',
+    timezone: 'UTC',
   });
   
   const [errors, setErrors] = useState({
     name: '',
-    email: '',
+    location: '',
   });
 
+  const [isCreatingMenu, setIsCreatingMenu] = useState(false);
+
+  useEffect(() => {
+    if (restaurant) {
+      router.replace('/(tabs)/menu');
+    }
+  }, [restaurant]);
+
   const validate = () => {
-    const newErrors = { name: '', email: '' };
+    const newErrors = { name: '', location: '' };
     let isValid = true;
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Restaurant name is required';
       isValid = false;
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
       isValid = false;
     }
 
@@ -62,108 +74,136 @@ export default function RegisterScreen() {
     return isValid;
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (validate()) {
-      dispatch(registerUser({
+      setIsCreatingMenu(true);
+      
+      const restaurantResult = await dispatch(createRestaurant({
         name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        franchise: formData.franchise || null,
+        location: formData.location,
+        available: true,
+        timezone: formData.timezone,
       }));
+
+      if (createRestaurant.fulfilled.match(restaurantResult)) {
+        const newRestaurant = restaurantResult.payload;
+        toast.show('Restaurant created! 🎉', 'success');
+        
+        const menuResult = await dispatch(createMenu({ 
+          restaurantId: newRestaurant.R_ID,
+          version: 1 
+        }));
+
+        if (createMenu.fulfilled.match(menuResult)) {
+          toast.show('Ready to add menu items! 📋', 'success');
+        } else {
+          toast.show('Restaurant created, but menu setup failed', 'error');
+        }
+      } else {
+        toast.show(error || 'Failed to create restaurant', 'error');
+      }
+      
+      setIsCreatingMenu(false);
     }
   };
+
+  const isProcessing = isLoading || isCreatingMenu;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
         <View style={styles.headerContainer}>
-          <Text style={styles.headerIcon}>👤</Text>
-          <Text style={styles.headerTitle}>Create Account</Text>
-          <Text style={styles.headerSubtitle}>Sign up to get started</Text>
+          <Text style={styles.headerIcon}>🍽️</Text>
+          <Text style={styles.headerTitle}>Create Restaurant</Text>
+          <Text style={styles.headerSubtitle}>Register your restaurant to get started</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.formContainer}>
-          {/* Name Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Full Name *</Text>
+            <Text style={styles.inputLabel}>Restaurant Name *</Text>
             <TextInput
               style={[
                 styles.textInput,
                 errors.name ? styles.textInputError : styles.textInputNormal,
               ]}
-              placeholder="Enter your name"
+              placeholder="e.g., La Tavola"
               placeholderTextColor={theme.colors.foreground.lighter}
               value={formData.name}
               onChangeText={(name) => {
                 setFormData({ ...formData, name });
                 setErrors({ ...errors, name: '' });
               }}
-              editable={!isLoading}
+              editable={!isProcessing}
             />
             {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
           </View>
 
-          {/* Email Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email *</Text>
+            <Text style={styles.inputLabel}>Franchise (Optional)</Text>
+            <TextInput
+              style={[styles.textInput, styles.textInputNormal]}
+              placeholder="e.g., Italian Restaurants Inc."
+              placeholderTextColor={theme.colors.foreground.lighter}
+              value={formData.franchise}
+              onChangeText={(franchise) => setFormData({ ...formData, franchise })}
+              editable={!isProcessing}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Location *</Text>
             <TextInput
               style={[
                 styles.textInput,
-                errors.email ? styles.textInputError : styles.textInputNormal,
+                errors.location ? styles.textInputError : styles.textInputNormal,
               ]}
-              placeholder="Enter your email"
+              placeholder="e.g., New York, NY"
               placeholderTextColor={theme.colors.foreground.lighter}
-              value={formData.email}
-              onChangeText={(email) => {
-                setFormData({ ...formData, email });
-                setErrors({ ...errors, email: '' });
+              value={formData.location}
+              onChangeText={(location) => {
+                setFormData({ ...formData, location });
+                setErrors({ ...errors, location: '' });
               }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
+              editable={!isProcessing}
             />
-            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            {errors.location ? <Text style={styles.errorText}>{errors.location}</Text> : null}
           </View>
 
-          {/* Phone Input (Optional) */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Phone (Optional)</Text>
+            <Text style={styles.inputLabel}>Timezone</Text>
             <TextInput
               style={[styles.textInput, styles.textInputNormal]}
-              placeholder="Enter your phone number"
+              placeholder="UTC"
               placeholderTextColor={theme.colors.foreground.lighter}
-              value={formData.phone}
-              onChangeText={(phone) => setFormData({ ...formData, phone })}
-              keyboardType="phone-pad"
-              editable={!isLoading}
+              value={formData.timezone}
+              onChangeText={(timezone) => setFormData({ ...formData, timezone })}
+              editable={!isProcessing}
             />
           </View>
 
-          {/* Register Button */}
           <TouchableOpacity
             onPress={handleRegister}
-            disabled={isLoading}
+            disabled={isProcessing}
             style={[
               styles.registerButton,
-              isLoading ? styles.registerButtonDisabled : styles.registerButtonActive,
+              isProcessing ? styles.registerButtonDisabled : styles.registerButtonActive,
             ]}
           >
-            {isLoading && (
+            {isProcessing && (
               <ActivityIndicator 
                 color={theme.colors.contrast.white} 
                 style={styles.loadingIndicator} 
               />
             )}
             <Text style={styles.registerButtonText}>
-              {isLoading ? 'Registering...' : 'Register'}
+              {isProcessing ? 'Setting up...' : 'Create Restaurant'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Info Text */}
         <Text style={styles.infoText}>
-          Note: Your profile will reset when you close the app
+          Your restaurant and menu will be ready instantly
         </Text>
       </ScrollView>
     </SafeAreaView>

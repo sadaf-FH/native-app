@@ -1,37 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   ScrollView, 
   TouchableOpacity, 
   SafeAreaView, 
   TextInput,
-  Alert 
+  ActivityIndicator,
+  Image,
+  Alert
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
+import { createCreateMenuScreenStyles } from './styles/Admin.styles';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { createMenu, addMenuItem, fetchMenuByRestaurant } from '@/store/slices/menuSlice';
+import { useToast } from '@/hooks/useToast';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 export default function CreateMenuScreen() {
-  const { 
-    colors, 
-    spacing, 
-    fontSize,
-    fontWeight,
-    borderRadius, 
-    borderWidth,
-    shadows,
-    isDark,
-    toggleTheme,
-  } = useTheme();
-  
-  const accent = colors.accent.CO;
+  const theme = useTheme();
+  const accent = theme.colors.accent.CO;
+  const dispatch = useAppDispatch();
+  const toast = useToast();
+
+  const restaurant = useAppSelector((state) => state.restaurant.restaurant);
+  const { menu, isLoading } = useAppSelector((state) => state.menu);
+
+  const styles = createCreateMenuScreenStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    fontWeight: theme.fontWeight,
+    borderRadius: theme.borderRadius,
+    borderWidth: theme.borderWidth,
+    shadows: theme.shadows,
+    accent,
+  });
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    category: 'main' as 'appetizer' | 'main' | 'dessert' | 'beverage',
+    category: 'Mains' as string,
   });
 
   const [tags, setTags] = useState({
@@ -41,85 +53,138 @@ export default function CreateMenuScreen() {
     isNew: false,
   });
 
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
   const categories = [
-    { id: 'appetizer', label: 'Appetizer', icon: '🥗' },
-    { id: 'main', label: 'Main', icon: '🍝' },
-    { id: 'dessert', label: 'Dessert', icon: '🍰' },
-    { id: 'beverage', label: 'Beverage', icon: '🍷' },
+    { id: 'Appetizers', label: 'Appetizers', icon: '🥗' },
+    { id: 'Mains', label: 'Mains', icon: '🍝' },
+    { id: 'Desserts', label: 'Desserts', icon: '🍰' },
+    { id: 'Beverages', label: 'Beverages', icon: '🍷' },
   ];
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    if (restaurant && !menu) {
+      dispatch(createMenu({ restaurantId: restaurant.R_ID }));
+    }
+  }, [restaurant, menu]);
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload images');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        setImageUri(result.assets[0].uri);
+        toast.show('Image selected! 📷', 'success');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      toast.show('Failed to pick image', 'error');
+    }
+  };
+
+  const convertImageToBase64 = async (uri: string): Promise<string> => {
+    try {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!formData.name || !formData.price) {
-      Alert.alert('Error', 'Please fill in name and price');
+      toast.show('Please fill in name and price', 'error');
       return;
     }
-    Alert.alert('Success', 'Menu item created!');
-    // Reset form
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      category: 'main',
-    });
-    setTags({
-      isVegetarian: false,
-      isSpicy: false,
-      isPopular: false,
-      isNew: false,
-    });
+
+    if (!menu) {
+      toast.show('Menu not initialized', 'error');
+      return;
+    }
+
+    setIsProcessingImage(true);
+
+    try {
+      let imageBase64: string | undefined;
+      
+      if (imageUri) {
+        imageBase64 = await convertImageToBase64(imageUri);
+      }
+
+      const result = await dispatch(addMenuItem({
+        menuId: menu.menu_id,
+        item: {
+          categoryName: formData.category,
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          orderType: 'DINE_IN',
+          imageBase64,
+          ...tags,
+        },
+      }));
+
+      if (addMenuItem.fulfilled.match(result)) {
+        toast.show('Item added successfully! 🎉', 'success');
+        
+        setFormData({
+          name: '',
+          description: '',
+          price: '',
+          category: 'Mains',
+        });
+        setTags({
+          isVegetarian: false,
+          isSpicy: false,
+          isPopular: false,
+          isNew: false,
+        });
+        setImageUri(null);
+
+        if (restaurant) {
+          dispatch(fetchMenuByRestaurant(restaurant.R_ID));
+        }
+      } else {
+        toast.show('Failed to add item', 'error');
+      }
+    } catch (error) {
+      console.error('Error submitting item:', error);
+      toast.show('Failed to process image', 'error');
+    } finally {
+      setIsProcessingImage(false);
+    }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       {/* Header */}
-      <View
-        style={{
-          backgroundColor: colors.background.elevated,
-          borderBottomWidth: borderWidth.bw20,
-          borderBottomColor: colors.border.medium,
-          padding: spacing.space400,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          ...shadows.medium,
-        }}
-      >
-        <View>
-          <Text
-            style={{
-              color: accent,
-              fontSize: fontSize.fs800,
-              fontWeight: fontWeight.bold,
-            }}
-          >
-            Create Menu Item
-          </Text>
-          <Text
-            style={{
-              color: colors.foreground.tertiary,
-              fontSize: fontSize.fs200,
-              marginTop: spacing.space150,
-            }}
-          >
-            Add a new dish to your menu
+      <View style={styles.header}>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>Add Menu Item</Text>
+          <Text style={styles.headerSubtitle}>
+            {menu ? `${menu.Categories?.length || 0} categories` : 'Loading...'}
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={toggleTheme}
-          style={{
-            backgroundColor: accent,
-            padding: spacing.space400,
-            borderRadius: borderRadius.br50,
-            borderWidth: borderWidth.bw10,
-            borderColor: accent,
-          }}
-        >
-          {isDark ? (
+        <TouchableOpacity onPress={theme.toggleTheme} style={styles.themeToggleButton}>
+          {theme.isDark ? (
             <Svg width={22} height={22} viewBox="0 0 24 24">
-              <Path
-                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                fill="white"
-              />
+              <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="white" />
             </Svg>
           ) : (
             <Svg width={22} height={22} viewBox="0 0 24 24">
@@ -141,46 +206,26 @@ export default function CreateMenuScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{
-          backgroundColor: colors.background.tertiary,
-          borderBottomWidth: borderWidth.bw10,
-          borderBottomColor: colors.border.lighter,
-          maxHeight: 50,
-        }}
-        contentContainerStyle={{
-          alignItems: "center",
-          paddingVertical: spacing.space150,
-          paddingHorizontal: spacing.space400,
-        }}
+        style={styles.categoryScrollView}
+        contentContainerStyle={styles.categoryScrollContent}
       >
         {categories.map((category) => {
           const isSelected = formData.category === category.id;
           return (
             <TouchableOpacity
               key={category.id}
-              onPress={() => setFormData({ ...formData, category: category.id as any })}
-              style={{
-                backgroundColor: isSelected ? accent : colors.background.elevated,
-                paddingVertical: spacing.space100,
-                paddingHorizontal: spacing.space500,
-                borderRadius: borderRadius.br70,
-                marginRight: spacing.space300,
-                borderWidth: borderWidth.bw20,
-                borderColor: isSelected ? accent : colors.border.lighter,
-                flexDirection: 'row',
-                alignItems: 'center',
-                ...shadows.small,
-              }}
+              onPress={() => setFormData({ ...formData, category: category.id })}
+              style={[
+                styles.categoryButton,
+                isSelected ? styles.categoryButtonSelected : styles.categoryButtonUnselected,
+              ]}
             >
-              <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space100 }}>
-                {category.icon}
-              </Text>
+              <Text style={styles.categoryIcon}>{category.icon}</Text>
               <Text
-                style={{
-                  color: isSelected ? colors.contrast.white : colors.foreground.primary,
-                  fontSize: fontSize.fs200,
-                  fontWeight: isSelected ? fontWeight.bold : fontWeight.medium,
-                }}
+                style={[
+                  styles.categoryLabel,
+                  isSelected ? styles.categoryLabelSelected : styles.categoryLabelUnselected,
+                ]}
               >
                 {category.label}
               </Text>
@@ -190,338 +235,299 @@ export default function CreateMenuScreen() {
       </ScrollView>
 
       {/* Form */}
-      <ScrollView 
-        style={styles.content} 
-        contentContainerStyle={{ padding: spacing.space400 }}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Name Input */}
-        <View style={{ marginBottom: spacing.space400 }}>
-          <Text
+        {/* Image Picker */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Image (Optional)</Text>
+          <TouchableOpacity
+            onPress={pickImage}
+            disabled={isLoading || isProcessingImage}
             style={{
-              color: colors.foreground.primary,
-              fontSize: fontSize.fs300,
-              fontWeight: fontWeight.bold,
-              marginBottom: spacing.space200,
+              backgroundColor: theme.colors.background.elevated,
+              borderRadius: theme.borderRadius.br50,
+              borderWidth: theme.borderWidth.bw10,
+              borderColor: theme.colors.border.subtle,
+              overflow: 'hidden',
+              marginBottom: theme.spacing.space200,
             }}
           >
-            Dish Name *
-          </Text>
+            {imageUri ? (
+              <Image
+                source={{ uri: imageUri }}
+                style={{
+                  width: '100%',
+                  height: 200,
+                }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={{ 
+                alignItems: 'center', 
+                padding: theme.spacing.space600,
+                backgroundColor: theme.colors.background.secondary,
+              }}>
+                <Text style={{ 
+                  fontSize: theme.fontSize.fs900, 
+                  marginBottom: theme.spacing.space300 
+                }}>
+                  📷
+                </Text>
+                <Text style={{ 
+                  color: theme.colors.foreground.primary,
+                  fontSize: theme.fontSize.fs300,
+                  fontWeight: theme.fontWeight.medium,
+                  marginBottom: theme.spacing.space100,
+                }}>
+                  Tap to add image
+                </Text>
+                <Text style={{ 
+                  color: theme.colors.foreground.tertiary,
+                  fontSize: theme.fontSize.fs200,
+                }}>
+                  Recommended: 4:3 ratio
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {imageUri && (
+            <TouchableOpacity
+              onPress={() => setImageUri(null)}
+              style={{
+                backgroundColor: theme.colors.background.secondary,
+                padding: theme.spacing.space200,
+                borderRadius: theme.borderRadius.br50,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ 
+                color: theme.colors.foreground.negative,
+                fontSize: theme.fontSize.fs300,
+              }}>
+                Remove Image
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Name Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Dish Name *</Text>
           <TextInput
-            style={{
-              backgroundColor: colors.background.elevated,
-              color: colors.foreground.primary,
-              fontSize: fontSize.fs400,
-              padding: spacing.space400,
-              borderRadius: borderRadius.br50,
-              borderWidth: borderWidth.bw10,
-              borderColor: colors.border.subtle,
-            }}
+            style={styles.textInput}
             placeholder="e.g., Margherita Pizza"
-            placeholderTextColor={colors.foreground.lighter}
+            placeholderTextColor={theme.colors.foreground.lighter}
             value={formData.name}
             onChangeText={(name) => setFormData({ ...formData, name })}
+            editable={!isLoading && !isProcessingImage}
           />
         </View>
 
         {/* Description Input */}
-        <View style={{ marginBottom: spacing.space400 }}>
-          <Text
-            style={{
-              color: colors.foreground.primary,
-              fontSize: fontSize.fs300,
-              fontWeight: fontWeight.bold,
-              marginBottom: spacing.space200,
-            }}
-          >
-            Description
-          </Text>
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Description</Text>
           <TextInput
-            style={{
-              backgroundColor: colors.background.elevated,
-              color: colors.foreground.primary,
-              fontSize: fontSize.fs400,
-              padding: spacing.space400,
-              borderRadius: borderRadius.br50,
-              borderWidth: borderWidth.bw10,
-              borderColor: colors.border.subtle,
-              minHeight: 100,
-              textAlignVertical: 'top',
-            }}
+            style={[styles.textInput, styles.textInputMultiline]}
             placeholder="Describe your dish..."
-            placeholderTextColor={colors.foreground.lighter}
+            placeholderTextColor={theme.colors.foreground.lighter}
             value={formData.description}
             onChangeText={(description) => setFormData({ ...formData, description })}
             multiline
             numberOfLines={4}
+            editable={!isLoading && !isProcessingImage}
           />
         </View>
 
         {/* Price Input */}
-        <View style={{ marginBottom: spacing.space400 }}>
-          <Text
-            style={{
-              color: colors.foreground.primary,
-              fontSize: fontSize.fs300,
-              fontWeight: fontWeight.bold,
-              marginBottom: spacing.space200,
-            }}
-          >
-            Price *
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs700,
-                marginRight: spacing.space200,
-              }}
-            >
-              $
-            </Text>
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Price *</Text>
+          <View style={styles.priceInputRow}>
+            <Text style={styles.priceDollarSign}>$</Text>
             <TextInput
-              style={{
-                flex: 1,
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: colors.border.subtle,
-              }}
+              style={[styles.textInput, styles.priceInput]}
               placeholder="0.00"
-              placeholderTextColor={colors.foreground.lighter}
+              placeholderTextColor={theme.colors.foreground.lighter}
               value={formData.price}
               onChangeText={(price) => setFormData({ ...formData, price })}
               keyboardType="decimal-pad"
+              editable={!isLoading && !isProcessingImage}
             />
           </View>
         </View>
 
         {/* Tags Section */}
-        <View style={{ marginBottom: spacing.space600 }}>
-          <Text
-            style={{
-              color: colors.foreground.primary,
-              fontSize: fontSize.fs300,
-              fontWeight: fontWeight.bold,
-              marginBottom: spacing.space300,
-            }}
-          >
-            Tags
-          </Text>
-          <View style={{ gap: spacing.space300 }}>
+        <View style={styles.tagsSection}>
+          <Text style={styles.tagsLabel}>Tags</Text>
+          <View style={styles.tagsContainer}>
             {/* Vegetarian */}
             <TouchableOpacity
               onPress={() => setTags({ ...tags, isVegetarian: !tags.isVegetarian })}
-              style={{
-                backgroundColor: tags.isVegetarian ? colors.background.accentCM : colors.background.elevated,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: tags.isVegetarian ? colors.border.accentCM : colors.border.subtle,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              style={[
+                styles.tagButton,
+                tags.isVegetarian ? styles.tagButtonVegetarian : styles.tagButtonUnselected,
+              ]}
+              disabled={isLoading || isProcessingImage}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: fontSize.fs500, marginRight: spacing.space300 }}>🌱</Text>
+              <View style={styles.tagContent}>
+                <Text style={styles.tagIcon}>🌱</Text>
                 <Text
-                  style={{
-                    color: tags.isVegetarian ? colors.foreground.accentCM : colors.foreground.primary,
-                    fontSize: fontSize.fs400,
-                    fontWeight: fontWeight.medium,
-                  }}
+                  style={[
+                    styles.tagText,
+                    tags.isVegetarian ? styles.tagTextVegetarian : styles.tagTextUnselected,
+                  ]}
                 >
                   Vegetarian
                 </Text>
               </View>
               <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: borderRadius.br40,
-                  borderWidth: borderWidth.bw20,
-                  borderColor: tags.isVegetarian ? colors.border.accentCM : colors.border.medium,
-                  backgroundColor: tags.isVegetarian ? colors.foreground.accentCM : 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={[
+                  styles.tagCheckbox,
+                  tags.isVegetarian ? styles.tagCheckboxVegetarian : styles.tagCheckboxUnselected,
+                ]}
               >
-                {tags.isVegetarian && (
-                  <Text style={{ color: colors.contrast.white, fontSize: fontSize.fs200 }}>✓</Text>
-                )}
+                {tags.isVegetarian && <Text style={styles.tagCheckmark}>✓</Text>}
               </View>
             </TouchableOpacity>
 
             {/* Spicy */}
             <TouchableOpacity
               onPress={() => setTags({ ...tags, isSpicy: !tags.isSpicy })}
-              style={{
-                backgroundColor: tags.isSpicy ? colors.background.negative : colors.background.elevated,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: tags.isSpicy ? colors.border.negative : colors.border.subtle,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              style={[
+                styles.tagButton,
+                tags.isSpicy ? styles.tagButtonSpicy : styles.tagButtonUnselected,
+              ]}
+              disabled={isLoading || isProcessingImage}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: fontSize.fs500, marginRight: spacing.space300 }}>🌶️</Text>
+              <View style={styles.tagContent}>
+                <Text style={styles.tagIcon}>🌶️</Text>
                 <Text
-                  style={{
-                    color: tags.isSpicy ? colors.foreground.negative : colors.foreground.primary,
-                    fontSize: fontSize.fs400,
-                    fontWeight: fontWeight.medium,
-                  }}
+                  style={[
+                    styles.tagText,
+                    tags.isSpicy ? styles.tagTextSpicy : styles.tagTextUnselected,
+                  ]}
                 >
                   Spicy
                 </Text>
               </View>
               <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: borderRadius.br40,
-                  borderWidth: borderWidth.bw20,
-                  borderColor: tags.isSpicy ? colors.border.negative : colors.border.medium,
-                  backgroundColor: tags.isSpicy ? colors.foreground.negative : 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={[
+                  styles.tagCheckbox,
+                  tags.isSpicy ? styles.tagCheckboxSpicy : styles.tagCheckboxUnselected,
+                ]}
               >
-                {tags.isSpicy && (
-                  <Text style={{ color: colors.contrast.white, fontSize: fontSize.fs200 }}>✓</Text>
-                )}
+                {tags.isSpicy && <Text style={styles.tagCheckmark}>✓</Text>}
               </View>
             </TouchableOpacity>
 
             {/* Popular */}
             <TouchableOpacity
               onPress={() => setTags({ ...tags, isPopular: !tags.isPopular })}
-              style={{
-                backgroundColor: tags.isPopular ? colors.background.positive : colors.background.elevated,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: tags.isPopular ? colors.border.positive : colors.border.subtle,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              style={[
+                styles.tagButton,
+                tags.isPopular ? styles.tagButtonPopular : styles.tagButtonUnselected,
+              ]}
+              disabled={isLoading || isProcessingImage}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: fontSize.fs500, marginRight: spacing.space300 }}>🔥</Text>
+              <View style={styles.tagContent}>
+                <Text style={styles.tagIcon}>🔥</Text>
                 <Text
-                  style={{
-                    color: tags.isPopular ? colors.foreground.positive : colors.foreground.primary,
-                    fontSize: fontSize.fs400,
-                    fontWeight: fontWeight.medium,
-                  }}
+                  style={[
+                    styles.tagText,
+                    tags.isPopular ? styles.tagTextPopular : styles.tagTextUnselected,
+                  ]}
                 >
                   Popular
                 </Text>
               </View>
               <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: borderRadius.br40,
-                  borderWidth: borderWidth.bw20,
-                  borderColor: tags.isPopular ? colors.border.positive : colors.border.medium,
-                  backgroundColor: tags.isPopular ? colors.foreground.positive : 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={[
+                  styles.tagCheckbox,
+                  tags.isPopular ? styles.tagCheckboxPopular : styles.tagCheckboxUnselected,
+                ]}
               >
-                {tags.isPopular && (
-                  <Text style={{ color: colors.contrast.white, fontSize: fontSize.fs200 }}>✓</Text>
-                )}
+                {tags.isPopular && <Text style={styles.tagCheckmark}>✓</Text>}
               </View>
             </TouchableOpacity>
 
             {/* New */}
             <TouchableOpacity
               onPress={() => setTags({ ...tags, isNew: !tags.isNew })}
-              style={{
-                backgroundColor: tags.isNew ? colors.background.link : colors.background.elevated,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: tags.isNew ? colors.border.link : colors.border.subtle,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              style={[
+                styles.tagButton,
+                tags.isNew ? styles.tagButtonNew : styles.tagButtonUnselected,
+              ]}
+              disabled={isLoading || isProcessingImage}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: fontSize.fs500, marginRight: spacing.space300 }}>✨</Text>
+              <View style={styles.tagContent}>
+                <Text style={styles.tagIcon}>✨</Text>
                 <Text
-                  style={{
-                    color: tags.isNew ? colors.foreground.link : colors.foreground.primary,
-                    fontSize: fontSize.fs400,
-                    fontWeight: fontWeight.medium,
-                  }}
+                  style={[
+                    styles.tagText,
+                    tags.isNew ? styles.tagTextNew : styles.tagTextUnselected,
+                  ]}
                 >
                   New Item
                 </Text>
               </View>
               <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: borderRadius.br40,
-                  borderWidth: borderWidth.bw20,
-                  borderColor: tags.isNew ? colors.border.link : colors.border.medium,
-                  backgroundColor: tags.isNew ? colors.foreground.link : 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={[
+                  styles.tagCheckbox,
+                  tags.isNew ? styles.tagCheckboxNew : styles.tagCheckboxUnselected,
+                ]}
               >
-                {tags.isNew && (
-                  <Text style={{ color: colors.contrast.white, fontSize: fontSize.fs200 }}>✓</Text>
-                )}
+                {tags.isNew && <Text style={styles.tagCheckmark}>✓</Text>}
               </View>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity
-          onPress={handleSubmit}
-          style={{
-            backgroundColor: accent,
-            padding: spacing.space400,
-            borderRadius: borderRadius.br50,
-            alignItems: 'center',
-            marginBottom: spacing.space400,
-            ...shadows.medium,
-          }}
+        <TouchableOpacity 
+          onPress={handleSubmit} 
+          style={styles.submitButton}
+          disabled={isLoading || isProcessingImage}
         >
-          <Text
-            style={{
-              color: colors.contrast.white,
-              fontSize: fontSize.fs500,
-              fontWeight: fontWeight.bold,
-            }}
-          >
-            Create Menu Item
-          </Text>
+          {(isLoading || isProcessingImage) ? (
+            <ActivityIndicator color={theme.colors.contrast.white} />
+          ) : (
+            <Text style={styles.submitButtonText}>Add to Menu</Text>
+          )}
         </TouchableOpacity>
+
+        {/* Current Menu Summary */}
+        {menu && menu.Categories && menu.Categories.length > 0 && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.tagsLabel}>Current Menu Summary</Text>
+            {menu.Categories.map((cat) => (
+              <View
+                key={cat.category_id}
+                style={{
+                  backgroundColor: theme.colors.background.elevated,
+                  padding: theme.spacing.space300,
+                  borderRadius: theme.borderRadius.br50,
+                  marginBottom: theme.spacing.space200,
+                }}
+              >
+                <Text style={{ 
+                  color: theme.colors.foreground.primary, 
+                  fontWeight: theme.fontWeight.bold 
+                }}>
+                  {cat.name}: {cat.item_count} items
+                </Text>
+                <Text style={{ 
+                  color: theme.colors.foreground.tertiary, 
+                  fontSize: theme.fontSize.fs200 
+                }}>
+                  Avg Price: ${cat.avg_price.toFixed(2)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-});

@@ -2,10 +2,11 @@ import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
-type SortType = 'default' | 'price-low' | 'price-high' | 'rating';
+// Fixed: Removed 'rating' to match MenuScreen
+type SortType = 'default' | 'price-low' | 'price-high';
 
 interface SortOption {
-  id: string;
+  id: SortType; // Fixed: Changed from string to SortType
   label: string;
   icon: string;
 }
@@ -92,7 +93,7 @@ export default function SearchFilterBar({
           return (
             <TouchableOpacity
               key={option.id}
-              onPress={() => setSortBy(option.id as SortType)}
+              onPress={() => setSortBy(option.id)} // Fixed: No need to cast anymore
               style={{
                 backgroundColor: isSelected ? accent : colors.background.elevated,
                 paddingVertical: spacing.space100,
