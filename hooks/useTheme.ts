@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { toggleTheme as toggleThemeAction, setTheme } from '@/store/slices/themeSlice';
 import { 
   Colors, 
   Spacing, 
@@ -17,24 +18,22 @@ type ThemeMode = 'light' | 'dark';
 
 export const useTheme = () => {
   const systemColorScheme = useColorScheme();
-  const [manualTheme, setManualTheme] = useState<ThemeMode | null>(null);
+  const dispatch = useAppDispatch();
   
-  // Use manual theme if set, otherwise use system theme
-  const activeTheme: ThemeMode = manualTheme ?? (systemColorScheme ?? 'light');
+  // Get theme state from Redux instead of useState
+  const isDarkFromRedux = useAppSelector((state) => state.theme.isDark);
+  
+  // Use Redux theme
+  const activeTheme: ThemeMode = isDarkFromRedux ? 'dark' : 'light';
   const colors = Colors[activeTheme];
   
   const toggleTheme = () => {
-    setManualTheme(prev => {
-      if (prev === null) {
-        // First toggle: set opposite of system theme
-        return systemColorScheme === 'light' ? 'dark' : 'light';
-      }
-      return prev === 'light' ? 'dark' : 'light';
-    });
+    dispatch(toggleThemeAction());
   };
   
   const resetToSystemTheme = () => {
-    setManualTheme(null);
+    const isSystemDark = systemColorScheme === 'dark';
+    dispatch(setTheme(isSystemDark));
   };
   
   return {
@@ -53,12 +52,12 @@ export const useTheme = () => {
     zIndex: ZIndex,
     
     // Theme info
-    isDark: activeTheme === 'dark',
+    isDark: isDarkFromRedux,
     currentTheme: activeTheme,
     
     // Theme controls
     toggleTheme,
     resetToSystemTheme,
-    isManualTheme: manualTheme !== null,
+    isManualTheme: true, // Always manual with Redux
   };
 };

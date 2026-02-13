@@ -1,58 +1,77 @@
-import { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  ScrollView, 
-  ActivityIndicator 
-} from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { useToast } from '@/hooks/useToast';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { registerUser } from '@/store/slices/userSlice';
+import { createMenu } from '@/store/slices/menuSlice';
+import { createRestaurant } from '@/store/slices/restaurantSlice';
+import { Picker } from '@react-native-picker/picker';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { createRegisterScreenStyles } from './styles/Register.styles';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
-  const { 
-    colors, 
-    spacing, 
-    fontSize, 
-    fontWeight, 
-    borderRadius, 
-    borderWidth, 
-    shadows 
-  } = useTheme();
-  
-  const accent = colors.accent.CO;
+  const theme = useTheme();
+  const accent = theme.colors.accent.CO;
   const dispatch = useAppDispatch();
-  const isLoading = useAppSelector((state) => state.user.isLoading);
+  const toast = useToast();
+  const router = useRouter();
+  const borderColor = theme.colors.border.medium as string;
+  const backgroundColor = theme.colors.background.primary as string;
+  const textColor = theme.colors.foreground.primary as string;
+  const iconColor = theme.colors.foreground.lighter as string;
+  const { restaurant, isLoading, error } = useAppSelector((state) => state.restaurant);
+
+  const styles = createRegisterScreenStyles({
+    colors: theme.colors,
+    spacing: theme.spacing,
+    fontSize: theme.fontSize,
+    fontWeight: theme.fontWeight,
+    borderRadius: theme.borderRadius,
+    borderWidth: theme.borderWidth,
+    shadows: theme.shadows,
+    accent,
+  });
 
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    phone: '',
+    franchise: '',
+    location: '',
+    timezone: 'UTC',
   });
   
   const [errors, setErrors] = useState({
     name: '',
-    email: '',
+    location: '',
   });
 
+  const [isCreatingMenu, setIsCreatingMenu] = useState(false);
+
+  useEffect(() => {
+    if (restaurant) {
+      router.replace('/(tabs)/menu');
+    }
+  }, [restaurant]);
+
   const validate = () => {
-    const newErrors = { name: '', email: '' };
+    const newErrors = { name: '', location: '' };
     let isValid = true;
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Restaurant name is required';
       isValid = false;
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
       isValid = false;
     }
 
@@ -60,217 +79,160 @@ export default function RegisterScreen() {
     return isValid;
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (validate()) {
-      dispatch(registerUser({
+      setIsCreatingMenu(true);
+      
+      const restaurantResult = await dispatch(createRestaurant({
         name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        franchise: formData.franchise || null,
+        location: formData.location,
+        available: true,
+        timezone: formData.timezone,
       }));
+
+      if (createRestaurant.fulfilled.match(restaurantResult)) {
+        const newRestaurant = restaurantResult.payload;
+        toast.show('Restaurant created! 🎉', 'success');
+        
+        const menuResult = await dispatch(createMenu({ 
+          restaurantId: newRestaurant.R_ID,
+          version: 1 
+        }));
+
+        if (createMenu.fulfilled.match(menuResult)) {
+          toast.show('Ready to add menu items!', 'success');
+        } else {
+          toast.show('Restaurant created, but menu setup failed', 'error');
+        }
+      } else {
+        toast.show(error || 'Failed to create restaurant', 'error');
+      }
+      
+      setIsCreatingMenu(false);
     }
   };
 
+  const isProcessing = isLoading || isCreatingMenu;
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
-      <ScrollView contentContainerStyle={{ padding: spacing.space400 }}>
-        {/* Header */}
-        <View style={{ alignItems: 'center', marginTop: spacing.space800, marginBottom: spacing.space800 }}>
-          <Text style={{ fontSize: 64, marginBottom: spacing.space400 }}>👤</Text>
-          <Text
-            style={{
-              color: accent,
-              fontSize: fontSize.fs1100,
-              fontWeight: fontWeight.bold,
-              marginBottom: spacing.space150,
-            }}
-          >
-            Create Account
-          </Text>
-          <Text
-            style={{
-              color: colors.foreground.tertiary,
-              fontSize: fontSize.fs300,
-              textAlign: 'center',
-            }}
-          >
-            Sign up to get started
-          </Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerContainer}>
+          <Ionicons
+            name="restaurant"
+            size={40}
+            color={accent}
+            style={{ marginBottom: theme.spacing.space300 }}
+          />
+          <Text style={styles.headerTitle}>Create Restaurant</Text>
+          <Text style={styles.headerSubtitle}>Register your restaurant to get started</Text>
         </View>
 
-        {/* Form */}
-        <View style={{ gap: spacing.space400 }}>
-          {/* Name Input */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.medium,
-                marginBottom: spacing.space200,
-              }}
-            >
-              Full Name *
-            </Text>
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Restaurant Name *</Text>
             <TextInput
-              style={{
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: errors.name ? colors.border.negative : colors.border.subtle,
-              }}
-              placeholder="Enter your name"
-              placeholderTextColor={colors.foreground.lighter}
+              style={[
+                styles.textInput,
+                errors.name ? styles.textInputError : styles.textInputNormal,
+              ]}
+              placeholder="e.g., La Tavola"
+              placeholderTextColor={theme.colors.foreground.lighter}
               value={formData.name}
               onChangeText={(name) => {
                 setFormData({ ...formData, name });
                 setErrors({ ...errors, name: '' });
               }}
-              editable={!isLoading}
+              editable={!isProcessing}
             />
-            {errors.name ? (
-              <Text
+            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Franchise (Optional)</Text>
+            <TextInput
+              style={[styles.textInput, styles.textInputNormal]}
+              placeholder="e.g., Italian Restaurants Inc."
+              placeholderTextColor={theme.colors.foreground.lighter}
+              value={formData.franchise}
+              onChangeText={(franchise) => setFormData({ ...formData, franchise })}
+              editable={!isProcessing}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Location *</Text>
+            <TextInput
+              style={[
+                styles.textInput,
+                errors.location ? styles.textInputError : styles.textInputNormal,
+              ]}
+              placeholder="e.g., New York, NY"
+              placeholderTextColor={theme.colors.foreground.lighter}
+              value={formData.location}
+              onChangeText={(location) => {
+                setFormData({ ...formData, location });
+                setErrors({ ...errors, location: '' });
+              }}
+              editable={!isProcessing}
+            />
+            {errors.location ? <Text style={styles.errorText}>{errors.location}</Text> : null}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Timezone</Text>
+              <View
                 style={{
-                  color: colors.foreground.negative,
-                  fontSize: fontSize.fs200,
-                  marginTop: spacing.space150,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  backgroundColor: backgroundColor,
                 }}
               >
-                {errors.name}
-              </Text>
-            ) : null}
+                <Picker
+                  selectedValue={formData.timezone}
+                  enabled={!isProcessing}
+                  dropdownIconColor={iconColor}
+                  style={{
+                    color: textColor,
+                  }}
+                  onValueChange={(value: string | number) =>
+                    setFormData({ ...formData, timezone: value as string })
+                  }
+                >
+                  <Picker.Item label="UTC" value="UTC" />
+                  <Picker.Item label="GMT" value="GMT" />
+                  <Picker.Item label="Asia/Kolkata" value="Asia/Kolkata" />
+                </Picker>
+              </View>
           </View>
 
-          {/* Email Input */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.medium,
-                marginBottom: spacing.space200,
-              }}
-            >
-              Email *
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: errors.email ? colors.border.negative : colors.border.subtle,
-              }}
-              placeholder="Enter your email"
-              placeholderTextColor={colors.foreground.lighter}
-              value={formData.email}
-              onChangeText={(email) => {
-                setFormData({ ...formData, email });
-                setErrors({ ...errors, email: '' });
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-            {errors.email ? (
-              <Text
-                style={{
-                  color: colors.foreground.negative,
-                  fontSize: fontSize.fs200,
-                  marginTop: spacing.space150,
-                }}
-              >
-                {errors.email}
-              </Text>
-            ) : null}
-          </View>
-
-          {/* Phone Input (Optional) */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs300,
-                fontWeight: fontWeight.medium,
-                marginBottom: spacing.space200,
-              }}
-            >
-              Phone (Optional)
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: colors.background.elevated,
-                color: colors.foreground.primary,
-                fontSize: fontSize.fs400,
-                padding: spacing.space400,
-                borderRadius: borderRadius.br50,
-                borderWidth: borderWidth.bw10,
-                borderColor: colors.border.subtle,
-              }}
-              placeholder="Enter your phone number"
-              placeholderTextColor={colors.foreground.lighter}
-              value={formData.phone}
-              onChangeText={(phone) => setFormData({ ...formData, phone })}
-              keyboardType="phone-pad"
-              editable={!isLoading}
-            />
-          </View>
-
-          {/* Register Button */}
           <TouchableOpacity
             onPress={handleRegister}
-            disabled={isLoading}
-            style={{
-              backgroundColor: isLoading ? colors.background.secondary : accent,
-              padding: spacing.space400,
-              borderRadius: borderRadius.br50,
-              alignItems: 'center',
-              marginTop: spacing.space400,
-              ...shadows.medium,
-              flexDirection: 'row',
-              justifyContent: 'center',
-            }}
+            disabled={isProcessing}
+            style={[
+              styles.registerButton,
+              isProcessing ? styles.registerButtonDisabled : styles.registerButtonActive,
+            ]}
           >
-            {isLoading && (
+            {isProcessing && (
               <ActivityIndicator 
-                color={colors.contrast.white} 
-                style={{ marginRight: spacing.space300 }} 
+                color={theme.colors.contrast.white} 
+                style={styles.loadingIndicator} 
               />
             )}
-            <Text
-              style={{
-                color: colors.contrast.white,
-                fontSize: fontSize.fs500,
-                fontWeight: fontWeight.bold,
-              }}
-            >
-              {isLoading ? 'Registering...' : 'Register'}
+            <Text style={styles.registerButtonText}>
+              {isProcessing ? 'Setting up...' : 'Create Restaurant'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Info Text */}
-        <Text
-          style={{
-            color: colors.foreground.tertiary,
-            fontSize: fontSize.fs200,
-            textAlign: 'center',
-            marginTop: spacing.space800,
-          }}
-        >
-          Note: Your profile will reset when you close the app
+        <Text style={styles.infoText}>
+          Your restaurant and menu will be ready instantly
         </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

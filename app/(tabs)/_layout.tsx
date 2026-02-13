@@ -1,23 +1,69 @@
-import { Stack, Tabs } from 'expo-router';
-import { Provider } from 'react-redux';
-import { store } from '@/store/store';
-import { useEffect } from 'react';
+import { useTheme } from '@/hooks/useTheme';
+import { useAppSelector } from '@/store/hooks';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
-export default function RootLayout() {
-  useEffect(() => {
-    console.log('Store initialized:', store);
-  }, []);
+export default function TabLayout() {
+  const isDark = useAppSelector((state) => state.theme.isDark);
+  const { colors, fontSize } = useTheme();
+  const accent = colors.accent.CO;
 
   return (
-    <Provider store={store}>
-      <Tabs>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="menu" />
-        <Stack.Screen name="profile" />
-        <Stack.Screen name="search" />
-      </Stack>
-      </Tabs>
-    </Provider>
+    <Tabs
+      key={isDark ? 'dark' : 'light'} 
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: accent,
+        tabBarInactiveTintColor: colors.foreground.secondary,
+        tabBarStyle: {
+          backgroundColor: colors.background.elevated,
+          borderTopColor: colors.border.light,
+          borderTopWidth: 1,
+        },
+        tabBarLabelStyle: {
+          fontSize: fontSize.fs100,
+          color: colors.foreground.secondary,
+        },
+      }}
+    >
+      <Tabs.Screen
+  name="menu"
+  options={{
+    title: "Menu",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="restaurant" size={size} color={color} />
+    ),
+  }}
+/>
+
+<Tabs.Screen
+  name="admin"
+  options={{
+    title: "Admin",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="settings" size={size} color={color} />
+    ),
+  }}
+/>
+
+<Tabs.Screen
+  name="profile"
+  options={{
+    title: "Profile",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="person" size={size} color={color} />
+    ),
+  }}
+/>
+<Tabs.Screen
+  name="order-flow"
+  options={{
+    title: "Order Flow",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons name="person" size={size} color={color} />
+    ),
+  }}
+/>
+    </Tabs>
   );
 }
