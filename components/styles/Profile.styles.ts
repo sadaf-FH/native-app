@@ -40,8 +40,7 @@ export const createProfileScreenStyles = ({
       borderRadius: borderRadius.br70,
       borderWidth: borderWidth.bw20,
       borderColor: colors.border.subtle,
-      marginBottom: spacing.space600,
-      ...shadows.medium,
+      marginBottom: spacing.space600
     } as ViewStyle,
 
     userCardHeader: {

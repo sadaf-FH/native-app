@@ -26,7 +26,9 @@ export const createHeaderStyles = ({
       backgroundColor: colors.background.elevated,
       borderBottomWidth: borderWidth.bw20,
       borderBottomColor: colors.border.medium,
-      padding: spacing.space400,
+      paddingHorizontal: spacing.space400,
+      paddingVertical: spacing.space400,
+      paddingTop: spacing.space200,        // ← reduce top padding, SafeAreaView handles the gap
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -34,7 +36,6 @@ export const createHeaderStyles = ({
     } as ViewStyle,
 
     titleContainer: {
-      // No specific styles needed, just a View
     } as ViewStyle,
 
     title: {
@@ -55,11 +56,11 @@ export const createHeaderStyles = ({
     } as ViewStyle,
 
     themeToggleButton: {
-      backgroundColor: accent,
-      padding: spacing.space400,
+      backgroundColor: colors.background.primary,   // ← blends with background
+      padding: spacing.space300,                    // ← slightly smaller
       borderRadius: borderRadius.br50,
       borderWidth: borderWidth.bw10,
-      borderColor: accent,
+      borderColor: colors.border.subtle,            // ← subtle border instead of accent
     } as ViewStyle,
 
     themeToggleButtonWithMargin: {
@@ -67,7 +68,7 @@ export const createHeaderStyles = ({
     } as ViewStyle,
 
     searchButton: {
-      backgroundColor: colors.state.primary.hover,
+      backgroundColor: colors.background.primary,   // ← match toggle button
       padding: spacing.space300,
       borderRadius: borderRadius.br50,
       borderWidth: borderWidth.bw10,
@@ -95,7 +96,7 @@ export const createHeaderStyles = ({
     } as ViewStyle,
 
     cartButtonInactive: {
-      backgroundColor: colors.state.primary.hover,
+      backgroundColor: colors.background.primary,  
       borderColor: colors.border.subtle,
     } as ViewStyle,
 

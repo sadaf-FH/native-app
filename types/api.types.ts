@@ -41,9 +41,7 @@ export interface MenuItem {
   image_base64?: string | null;
   ItemPrices?: Price[];
   AddOn?: Addons;
-  dataValues?: {
-    is_available_now?: boolean;
-  };
+  is_available_now?: boolean;
   createdAt?: string;
   updatedAt?: string;
 } 

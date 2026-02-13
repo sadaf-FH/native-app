@@ -1,12 +1,12 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// Fixed: Removed 'rating' to match MenuScreen
 type SortType = 'default' | 'price-low' | 'price-high';
 
 interface SortOption {
-  id: SortType; // Fixed: Changed from string to SortType
+  id: SortType;
   label: string;
   icon: string;
 }
@@ -53,7 +53,12 @@ export default function SearchFilterBar({
           ...shadows.small,
         }}
       >
-        <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space300 }}>🔎</Text>
+        <Ionicons
+          name="search"
+          size={16}
+          color={colors.foreground.primary}
+          style={{ marginRight: spacing.space300 }}
+        />
         <TextInput
           style={{
             flex: 1,
@@ -68,21 +73,18 @@ export default function SearchFilterBar({
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Text
-              style={{
-                color: colors.foreground.tertiary,
-                fontSize: fontSize.fs400,
-              }}
-            >
-              ✕
-            </Text>
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={colors.foreground.tertiary}
+            />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Sort Options */}
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
           paddingVertical: spacing.space150,
@@ -93,7 +95,7 @@ export default function SearchFilterBar({
           return (
             <TouchableOpacity
               key={option.id}
-              onPress={() => setSortBy(option.id)} // Fixed: No need to cast anymore
+              onPress={() => setSortBy(option.id)}
               style={{
                 backgroundColor: isSelected ? accent : colors.background.elevated,
                 paddingVertical: spacing.space100,
@@ -107,9 +109,12 @@ export default function SearchFilterBar({
                 ...shadows.small,
               }}
             >
-              <Text style={{ fontSize: fontSize.fs200, marginRight: spacing.space100 }}>
-                {option.icon}
-              </Text>
+              <Ionicons
+                name={option.icon as any}
+                size={14}
+                color={isSelected ? colors.contrast.white : colors.foreground.secondary}
+                style={{ marginRight: spacing.space100 }}
+              />
               <Text
                 style={{
                   color: isSelected ? colors.contrast.white : colors.foreground.primary,

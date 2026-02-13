@@ -5,6 +5,7 @@ export default ({ config }) => {
     dev: {
       name: "MyApp Dev",
       slug: "myapp-dev",
+      scheme: "myapp",
       package: "com.anonymous.myapp.dev",
       bundleId: "com.anonymous.myapp.dev",
       apiUrl: "https://api.dev.example.com",
@@ -16,7 +17,8 @@ export default ({ config }) => {
     },
     staging: {
       name: "MyApp Staging",
-      slug: "myapp-staging", 
+      slug: "myapp-staging",
+      scheme: "myapp",
       package: "com.anonymous.myapp.staging",
       bundleId: "com.anonymous.myapp.staging",
       apiUrl: "https://api.example.com",
@@ -35,6 +37,7 @@ export default ({ config }) => {
 
     name: current.name,
     slug: current.slug,
+    scheme: current.scheme,  
     icon: current.icon,
 
     extra: {
@@ -54,7 +57,11 @@ export default ({ config }) => {
     android: {
       ...config.android,
       package: current.package,
-      adaptiveIcon: current.adaptiveIcon, 
+      adaptiveIcon: current.adaptiveIcon,
     },
+
+    plugins: [
+      "@react-native-community/datetimepicker"
+    ],
   };
 };

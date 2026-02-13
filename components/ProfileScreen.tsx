@@ -1,18 +1,20 @@
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import Header from '@/components/base/Header';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { logout } from '@/store/slices/restaurantSlice';
 import { clearMenu } from '@/store/slices/menuSlice';
-import Header from '@/components/base/Header';
-import { createProfileScreenStyles } from './styles/Profile.styles';
+import { logout } from '@/store/slices/restaurantSlice';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { createProfileScreenStyles } from './styles/Profile.styles';
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const accent = theme.colors.accent.CO;
   const dispatch = useAppDispatch();
   const router = useRouter();
-  
+
   const restaurant = useAppSelector((state) => state.restaurant.restaurant);
   const menu = useAppSelector((state) => state.menu.menu);
 
@@ -36,26 +38,26 @@ export default function ProfileScreen() {
   const totalItems = menu?.Categories?.reduce((sum, cat) => sum + cat.item_count, 0) || 0;
 
   const statsItems = [
-    { icon: '📋', title: 'Menu Items', value: totalItems.toString() },
-    { icon: '📁', title: 'Categories', value: (menu?.Categories?.length || 0).toString() },
-    { icon: '🍽️', title: 'Version', value: `v${menu?.version || 1}` },
+    { icon: 'clipboard-outline', title: 'Menu Items', value: totalItems.toString() },
+    { icon: 'folder-outline', title: 'Categories', value: (menu?.Categories?.length || 0).toString() },
+    { icon: 'restaurant-outline', title: 'Version', value: `v${menu?.version || 1}` },
   ];
 
   const accountItems = [
-    { icon: '🏪', title: 'Restaurant Details', description: 'Name, location, franchise' },
-    { icon: '📍', title: 'Location Settings', description: 'Address and timezone' },
-    { icon: '⏰', title: 'Operating Hours', description: 'Manage availability' },
+    { icon: 'business-outline', title: 'Restaurant Details', description: 'Name, location, franchise' },
+    { icon: 'location-outline', title: 'Location Settings', description: 'Address and timezone' },
+    { icon: 'time-outline', title: 'Operating Hours', description: 'Manage availability' },
   ];
 
   const menuItems = [
-    { icon: '📋', title: 'Menu Management', description: 'View and edit menu' },
-    { icon: '🏷️', title: 'Offers & Discounts', description: 'Manage promotions' },
-    { icon: '📊', title: 'Analytics', description: 'View performance' },
+    { icon: 'clipboard-outline', title: 'Menu Management', description: 'View and edit menu' },
+    { icon: 'pricetag-outline', title: 'Offers & Discounts', description: 'Manage promotions' },
+    { icon: 'stats-chart-outline', title: 'Analytics', description: 'View performance' },
   ];
 
   const supportItems = [
-    { icon: '⚙️', title: 'Settings', description: 'App preferences' },
-    { icon: '❓', title: 'Help & Support', description: 'Get assistance' },
+    { icon: 'settings-outline', title: 'Settings', description: 'App preferences' },
+    { icon: 'help-circle-outline', title: 'Help & Support', description: 'Get assistance' },
   ];
 
   const renderMenuSection = (title: string, items: typeof accountItems) => (
@@ -72,14 +74,22 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuItemIcon}>
-                <Text style={styles.menuItemIconText}>{item.icon}</Text>
+                <Ionicons
+                  name={item.icon as any}
+                  size={18}
+                  color={accent}
+                />
               </View>
               <View style={styles.menuItemContent}>
                 <Text style={styles.menuItemTitle}>{item.title}</Text>
                 <Text style={styles.menuItemDescription}>{item.description}</Text>
               </View>
             </View>
-            <Text style={styles.menuItemArrow}>→</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={theme.colors.foreground.tertiary}
+            />
           </TouchableOpacity>
         ))}
       </View>
@@ -99,7 +109,7 @@ export default function ProfileScreen() {
         <View style={styles.userCard}>
           <View style={styles.userCardHeader}>
             <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarIcon}>🍽️</Text>
+              <Ionicons name="restaurant" size={24} color={theme.colors.foreground.primary} />
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{restaurant?.name || 'Guest Restaurant'}</Text>
@@ -108,7 +118,7 @@ export default function ProfileScreen() {
                 <Text style={styles.userPhone}>{restaurant.franchise}</Text>
               )}
               <Text style={styles.userPhone}>
-                {restaurant?.available ? '🟢 Available' : '🔴 Closed'}
+                {restaurant?.available ? 'Available' : 'Closed'}
               </Text>
             </View>
           </View>
@@ -133,10 +143,13 @@ export default function ProfileScreen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ fontSize: theme.fontSize.fs600, marginBottom: theme.spacing.space150 }}>
-                {stat.icon}
-              </Text>
-              <Text style={{ 
+              <Ionicons
+                name={stat.icon as any}
+                size={22}
+                color={accent}
+                style={{ marginBottom: theme.spacing.space150 }}
+              />
+              <Text style={{
                 color: accent,
                 fontSize: theme.fontSize.fs700,
                 fontWeight: theme.fontWeight.bold,
@@ -144,7 +157,7 @@ export default function ProfileScreen() {
               }}>
                 {stat.value}
               </Text>
-              <Text style={{ 
+              <Text style={{
                 color: theme.colors.foreground.tertiary,
                 fontSize: theme.fontSize.fs200,
                 textAlign: 'center',

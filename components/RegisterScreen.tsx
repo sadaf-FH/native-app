@@ -1,20 +1,22 @@
-import { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  ScrollView, 
-  ActivityIndicator 
-} from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { createRestaurant } from '@/store/slices/restaurantSlice';
-import { createMenu } from '@/store/slices/menuSlice';
-import { createRegisterScreenStyles } from './styles/Register.styles';
 import { useToast } from '@/hooks/useToast';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { createMenu } from '@/store/slices/menuSlice';
+import { createRestaurant } from '@/store/slices/restaurantSlice';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { createRegisterScreenStyles } from './styles/Register.styles';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const theme = useTheme();
@@ -22,7 +24,10 @@ export default function RegisterScreen() {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const router = useRouter();
-  
+  const borderColor = theme.colors.border.medium as string;
+  const backgroundColor = theme.colors.background.primary as string;
+  const textColor = theme.colors.foreground.primary as string;
+  const iconColor = theme.colors.foreground.lighter as string;
   const { restaurant, isLoading, error } = useAppSelector((state) => state.restaurant);
 
   const styles = createRegisterScreenStyles({
@@ -96,7 +101,7 @@ export default function RegisterScreen() {
         }));
 
         if (createMenu.fulfilled.match(menuResult)) {
-          toast.show('Ready to add menu items! 📋', 'success');
+          toast.show('Ready to add menu items!', 'success');
         } else {
           toast.show('Restaurant created, but menu setup failed', 'error');
         }
@@ -114,7 +119,12 @@ export default function RegisterScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerContainer}>
-          <Text style={styles.headerIcon}>🍽️</Text>
+          <Ionicons
+            name="restaurant"
+            size={40}
+            color={accent}
+            style={{ marginBottom: theme.spacing.space300 }}
+          />
           <Text style={styles.headerTitle}>Create Restaurant</Text>
           <Text style={styles.headerSubtitle}>Register your restaurant to get started</Text>
         </View>
@@ -172,14 +182,31 @@ export default function RegisterScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Timezone</Text>
-            <TextInput
-              style={[styles.textInput, styles.textInputNormal]}
-              placeholder="UTC"
-              placeholderTextColor={theme.colors.foreground.lighter}
-              value={formData.timezone}
-              onChangeText={(timezone) => setFormData({ ...formData, timezone })}
-              editable={!isProcessing}
-            />
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  backgroundColor: backgroundColor,
+                }}
+              >
+                <Picker
+                  selectedValue={formData.timezone}
+                  enabled={!isProcessing}
+                  dropdownIconColor={iconColor}
+                  style={{
+                    color: textColor,
+                  }}
+                  onValueChange={(value: string | number) =>
+                    setFormData({ ...formData, timezone: value as string })
+                  }
+                >
+                  <Picker.Item label="UTC" value="UTC" />
+                  <Picker.Item label="GMT" value="GMT" />
+                  <Picker.Item label="Asia/Kolkata" value="Asia/Kolkata" />
+                </Picker>
+              </View>
           </View>
 
           <TouchableOpacity

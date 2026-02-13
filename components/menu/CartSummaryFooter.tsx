@@ -9,11 +9,7 @@ interface CartSummaryFooterProps {
   onViewCart: () => void;
 }
 
-export default function CartSummaryFooter({
-  totalItems,
-  totalPrice,
-  onViewCart,
-}: CartSummaryFooterProps) {
+export default function CartSummaryFooter({ totalItems, totalPrice, onViewCart }: CartSummaryFooterProps) {
   const theme = useTheme();
   const accent = theme.colors.accent.CO;
 
@@ -38,9 +34,8 @@ export default function CartSummaryFooter({
         </Text>
         <Text style={styles.totalPriceText}>${totalPrice}</Text>
       </View>
-
       <TouchableOpacity onPress={onViewCart} style={styles.viewCartButton}>
-        <Text style={styles.viewCartButtonText}>View Cart →</Text>
+        <Text style={styles.viewCartButtonText}>View Order →</Text>
       </TouchableOpacity>
     </View>
   );

@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { FlatList, SafeAreaView, View, Text, ActivityIndicator } from 'react-native';
+import MenuItemCard from '@/components/base/Card';
+import Header from '@/components/base/Header';
+import CartModal from '@/components/menu/CartModal';
+import CartSummaryFooter from '@/components/menu/CartSummaryFooter';
+import CategoryFilter from '@/components/menu/CategoryFilter';
+import EmptyState from '@/components/menu/EmptyState';
+import OrderStatusModal from '@/components/menu/OrderStatusModal';
+import ResultsCount from '@/components/menu/ResultsCount';
+import SearchFilterBar from '@/components/menu/SearchFilterBar';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/useToast';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchMenuByRestaurant } from '@/store/slices/menuSlice';
-import Header from '@/components/base/Header';
-import MenuItemCard from '@/components/base/Card';
-import SearchFilterBar from '@/components/menu/SearchFilterBar';
-import CategoryFilter from '@/components/menu/CategoryFilter';
-import ResultsCount from '@/components/menu/ResultsCount';
-import CartSummaryFooter from '@/components/menu/CartSummaryFooter';
-import CartModal from '@/components/menu/CartModal';
-import EmptyState from '@/components/menu/EmptyState';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMenuScreenStyles } from './styles/Menu.styles';
 
 const PLACEHOLDER_IMAGES = {
@@ -62,6 +64,8 @@ export default function MenuScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<SortType>('default');
   const [showCart, setShowCart] = useState(false);
+  const [hasActiveOrder, setHasActiveOrder] = useState(false);
+  const [showOrderStatus, setShowOrderStatus] = useState(false);
 
   useEffect(() => {
     if (restaurant) {
@@ -97,19 +101,19 @@ export default function MenuScreen() {
           'Beverages': 'beverage',
         };
 
-        const itemImage = item.image_base64 
+        const itemImage = item.image_base64
           ? { uri: item.image_base64 }
           : PLACEHOLDER_IMAGES[category.name as keyof typeof PLACEHOLDER_IMAGES] || PLACEHOLDER_IMAGES.Mains;
 
         items.push({
           id: item.item_id,
           name: item.name,
-          description: `Delicious ${item.name}`,
+          description: `${item.name}`,
           price: finalPrice,
           originalPrice: discount > 0 ? basePrice : undefined,
           discount: discount > 0 ? discount : undefined,
           category: categoryMap[category.name] || 'main',
-          isAvailable: item.dataValues?.is_available_now !== false,
+          isAvailable: item.is_available_now !== false,
           isVegetarian: false,
           isSpicy: false,
           isPopular: false,
@@ -127,21 +131,21 @@ export default function MenuScreen() {
   const displayMenu = convertToDisplayMenu();
 
   const categories = [
-    { id: 'all' as CategoryType, label: 'All', icon: '🍽️' },
+    { id: 'all' as CategoryType, label: 'All', icon: 'restaurant-outline' },
     ...(menu?.Categories?.map((cat) => ({
       id: cat.name as CategoryType,
       label: cat.name,
-      icon: cat.name === 'Appetizers' ? '🥗' :
-            cat.name === 'Mains' ? '🍝' :
-            cat.name === 'Desserts' ? '🍰' :
-            cat.name === 'Beverages' ? '🍷' : '🍽️',
+      icon: cat.name === 'Appetizers' ? 'leaf-outline' :
+            cat.name === 'Mains' ? 'pizza-outline' :
+            cat.name === 'Desserts' ? 'ice-cream-outline' :
+            cat.name === 'Beverages' ? 'wine-outline' : 'restaurant-outline',
     })) || []),
   ];
 
   const sortOptions = [
-    { id: 'default' as SortType, label: 'Default', icon: '📋' },
-    { id: 'price-low' as SortType, label: 'Price: Low to High', icon: '💰' },
-    { id: 'price-high' as SortType, label: 'Price: High to Low', icon: '💎' },
+    { id: 'default' as SortType, label: 'Default', icon: 'list-outline' },
+    { id: 'price-low' as SortType, label: 'Price: Low to High', icon: 'trending-up-outline' },
+    { id: 'price-high' as SortType, label: 'Price: High to Low', icon: 'trending-down-outline' },
   ];
 
   const getFilteredAndSortedMenu = () => {
@@ -155,7 +159,7 @@ export default function MenuScreen() {
         'Desserts': 'dessert',
         'Beverages': 'beverage',
       };
-      
+
       const frontendCategory = backendCategoryMap[selectedCategory];
       if (frontendCategory) {
         filtered = displayMenu.filter((item) => item.category === frontendCategory);
@@ -187,7 +191,7 @@ export default function MenuScreen() {
       ...prev,
       [itemId]: (prev[itemId] || 0) + 1,
     }));
-    toast.show('Added to cart! 🛒', 'success');
+    toast.show('Added to cart!', 'success');
   };
 
   const removeFromCart = (itemId: string) => {
@@ -221,7 +225,8 @@ export default function MenuScreen() {
 
   const handlePlaceOrder = () => {
     setShowCart(false);
-    toast.show('Order placed successfully! 🎉', 'success');
+    setHasActiveOrder(true);
+    toast.show('Order placed successfully!', 'success');
     setTimeout(() => setCart({}), 500);
   };
 
@@ -269,10 +274,10 @@ export default function MenuScreen() {
         />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={accent} />
-          <Text style={{ 
-            color: theme.colors.foreground.secondary, 
+          <Text style={{
+            color: theme.colors.foreground.secondary,
             marginTop: theme.spacing.space400,
-            fontSize: theme.fontSize.fs300 
+            fontSize: theme.fontSize.fs300,
           }}>
             Loading menu...
           </Text>
@@ -289,8 +294,10 @@ export default function MenuScreen() {
         showThemeToggle={true}
         showSearch={true}
         showCart={true}
+        showTrackOrder={hasActiveOrder}
         onSearchPress={() => setShowFilters(!showFilters)}
         onCartPress={() => setShowCart(true)}
+        onTrackOrderPress={() => setShowOrderStatus(true)}
         cartItemCount={getTotalItems()}
       />
 
@@ -302,7 +309,7 @@ export default function MenuScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <EmptyState
-            icon="📋"
+            icon="clipboard-outline"
             title="No menu items yet"
             subtitle="Items added in Admin will appear here"
           />
@@ -331,6 +338,11 @@ export default function MenuScreen() {
         menuData={displayMenu}
         getTotalPrice={getTotalPrice}
         getTotalItems={getTotalItems}
+      />
+
+      <OrderStatusModal
+        visible={showOrderStatus}
+        onClose={() => setShowOrderStatus(false)}
       />
     </SafeAreaView>
   );

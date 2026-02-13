@@ -37,22 +37,19 @@ export const createCreateMenuScreenStyles = ({
     // Header
     header: {
       backgroundColor: colors.background.elevated,
-      borderBottomWidth: borderWidth.bw20,
-      borderBottomColor: colors.border.medium,
+      borderBottomWidth: borderWidth.bw10,                // ← was bw20
+      borderBottomColor: colors.border.subtle,            // ← was medium
       padding: spacing.space400,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      ...shadows.medium,
-    } as ViewStyle,
+    } as ViewStyle,                                       // ← removed shadow
 
-    headerTextContainer: {
-      // No specific styles needed
-    } as ViewStyle,
+    headerTextContainer: {} as ViewStyle,
 
     headerTitle: {
       color: accent,
-      fontSize: fontSize.fs800,
+      fontSize: fontSize.fs700,                          // ← was fs800
       fontWeight: fontWeight.bold,
     } as TextStyle,
 
@@ -63,18 +60,18 @@ export const createCreateMenuScreenStyles = ({
     } as TextStyle,
 
     themeToggleButton: {
-      backgroundColor: accent,
-      padding: spacing.space400,
+      backgroundColor: colors.background.primary,        // ← was accent (red)
+      padding: spacing.space300,                         // ← was space400
       borderRadius: borderRadius.br50,
       borderWidth: borderWidth.bw10,
-      borderColor: accent,
+      borderColor: colors.border.subtle,                 // ← was accent
     } as ViewStyle,
 
     // Category Selection
     categoryScrollView: {
-      backgroundColor: colors.background.tertiary,
+      backgroundColor: colors.background.primary,        // ← was tertiary
       borderBottomWidth: borderWidth.bw10,
-      borderBottomColor: colors.border.lighter,
+      borderBottomColor: colors.border.subtle,           // ← was lighter
       maxHeight: 50,
     } as ViewStyle,
 
@@ -86,14 +83,13 @@ export const createCreateMenuScreenStyles = ({
 
     categoryButton: {
       paddingVertical: spacing.space100,
-      paddingHorizontal: spacing.space500,
+      paddingHorizontal: spacing.space400,               // ← was space500
       borderRadius: borderRadius.br70,
-      marginRight: spacing.space300,
-      borderWidth: borderWidth.bw20,
+      marginRight: spacing.space200,                     // ← was space300
+      borderWidth: borderWidth.bw10,                    // ← was bw20
       flexDirection: 'row',
       alignItems: 'center',
-      ...shadows.small,
-    } as ViewStyle,
+    } as ViewStyle,                                      // ← removed shadow
 
     categoryButtonSelected: {
       backgroundColor: accent,
@@ -101,8 +97,8 @@ export const createCreateMenuScreenStyles = ({
     } as ViewStyle,
 
     categoryButtonUnselected: {
-      backgroundColor: colors.background.elevated,
-      borderColor: colors.border.lighter,
+      backgroundColor: 'transparent',                   // ← was elevated
+      borderColor: colors.border.subtle,                // ← was lighter
     } as ViewStyle,
 
     categoryIcon: {
@@ -120,34 +116,34 @@ export const createCreateMenuScreenStyles = ({
     } as TextStyle,
 
     categoryLabelUnselected: {
-      color: colors.foreground.primary,
-      fontWeight: fontWeight.medium,
+      color: colors.foreground.tertiary,                 // ← was primary
+      fontWeight: fontWeight.regular,                   // ← was medium
     } as TextStyle,
 
     // Form Inputs
     inputGroup: {
-      marginBottom: spacing.space400,
+      marginBottom: spacing.space500,                   // ← was space400
     } as ViewStyle,
 
     inputLabel: {
-      color: colors.foreground.primary,
-      fontSize: fontSize.fs300,
-      fontWeight: fontWeight.bold,
+      color: colors.foreground.tertiary,                // ← was primary
+      fontSize: fontSize.fs200,                         // ← was fs300
+      fontWeight: fontWeight.medium,                    // ← was bold
       marginBottom: spacing.space200,
     } as TextStyle,
 
     textInput: {
       backgroundColor: colors.background.elevated,
       color: colors.foreground.primary,
-      fontSize: fontSize.fs400,
-      padding: spacing.space400,
-      borderRadius: borderRadius.br50,
+      fontSize: fontSize.fs300,                         // ← was fs400
+      padding: spacing.space300,                        // ← was space400
+      borderRadius: borderRadius.br40,                  // ← was br50
       borderWidth: borderWidth.bw10,
       borderColor: colors.border.subtle,
     } as ViewStyle,
 
     textInputMultiline: {
-      minHeight: 100,
+      minHeight: 80,                                    // ← was 100
       textAlignVertical: 'top',
     } as ViewStyle,
 
@@ -157,8 +153,8 @@ export const createCreateMenuScreenStyles = ({
     } as ViewStyle,
 
     priceDollarSign: {
-      color: colors.foreground.primary,
-      fontSize: fontSize.fs700,
+      color: colors.foreground.tertiary,                // ← was primary
+      fontSize: fontSize.fs500,                         // ← was fs700
       marginRight: spacing.space200,
     } as TextStyle,
 
@@ -168,23 +164,23 @@ export const createCreateMenuScreenStyles = ({
 
     // Tags Section
     tagsSection: {
-      marginBottom: spacing.space600,
+      marginBottom: spacing.space500,                   // ← was space600
     } as ViewStyle,
 
     tagsLabel: {
-      color: colors.foreground.primary,
-      fontSize: fontSize.fs300,
-      fontWeight: fontWeight.bold,
+      color: colors.foreground.tertiary,                // ← was primary
+      fontSize: fontSize.fs200,                         // ← was fs300
+      fontWeight: fontWeight.medium,                    // ← was bold
       marginBottom: spacing.space300,
     } as TextStyle,
 
     tagsContainer: {
-      gap: spacing.space300,
+      gap: spacing.space200,                            // ← was space300
     } as ViewStyle,
 
     tagButton: {
-      padding: spacing.space400,
-      borderRadius: borderRadius.br50,
+      padding: spacing.space300,                        // ← was space400
+      borderRadius: borderRadius.br40,                  // ← was br50
       borderWidth: borderWidth.bw10,
       flexDirection: 'row',
       alignItems: 'center',
@@ -222,17 +218,17 @@ export const createCreateMenuScreenStyles = ({
     } as ViewStyle,
 
     tagIcon: {
-      fontSize: fontSize.fs500,
-      marginRight: spacing.space300,
+      fontSize: fontSize.fs400,                         // ← was fs500
+      marginRight: spacing.space200,                    // ← was space300
     } as TextStyle,
 
     tagText: {
-      fontSize: fontSize.fs400,
-      fontWeight: fontWeight.medium,
+      fontSize: fontSize.fs300,                         // ← was fs400
+      fontWeight: fontWeight.regular,                   // ← was medium
     } as TextStyle,
 
     tagTextUnselected: {
-      color: colors.foreground.primary,
+      color: colors.foreground.secondary,               // ← was primary
     } as TextStyle,
 
     tagTextVegetarian: {
@@ -252,16 +248,16 @@ export const createCreateMenuScreenStyles = ({
     } as TextStyle,
 
     tagCheckbox: {
-      width: 24,
-      height: 24,
+      width: 20,                                        // ← was 24
+      height: 20,                                       // ← was 24
       borderRadius: borderRadius.br40,
-      borderWidth: borderWidth.bw20,
+      borderWidth: borderWidth.bw10,                   // ← was bw20
       alignItems: 'center',
       justifyContent: 'center',
     } as ViewStyle,
 
     tagCheckboxUnselected: {
-      borderColor: colors.border.medium,
+      borderColor: colors.border.subtle,                // ← was medium
       backgroundColor: 'transparent',
     } as ViewStyle,
 
@@ -297,12 +293,11 @@ export const createCreateMenuScreenStyles = ({
       borderRadius: borderRadius.br50,
       alignItems: 'center',
       marginBottom: spacing.space400,
-      ...shadows.medium,
-    } as ViewStyle,
+    } as ViewStyle,                                     // ← removed shadow
 
     submitButtonText: {
       color: colors.contrast.white,
-      fontSize: fontSize.fs500,
+      fontSize: fontSize.fs400,                         // ← was fs500
       fontWeight: fontWeight.bold,
     } as TextStyle,
   });

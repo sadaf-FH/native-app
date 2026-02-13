@@ -4,12 +4,12 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  SafeAreaView, 
   TextInput,
   ActivityIndicator,
   Image,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { createCreateMenuScreenStyles } from './styles/Admin.styles';

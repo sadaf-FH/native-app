@@ -11,6 +11,7 @@ interface MenuItem {
   rating: number;
   reviews: number;
   image?: any;
+  isAvailable?: boolean;
 }
 
 interface MenuItemCardProps {
@@ -26,11 +27,11 @@ export default function MenuItemCard({
   onAdd,
   onRemove,
 }: MenuItemCardProps) {
+  const isAvailable = item.isAvailable !== false;
   const theme = useTheme();
   const accent = theme.colors.accent.CO;
   const isInCart = quantity > 0;
 
-  // Create styles with current theme
   const styles = createCardStyles({
     colors: theme.colors,
     spacing: theme.spacing,
@@ -41,7 +42,6 @@ export default function MenuItemCard({
     accent,
   });
 
-  // Multiple animations for a cool effect
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -51,14 +51,12 @@ export default function MenuItemCard({
   useEffect(() => {
     if (quantity !== previousQuantity.current && quantity > 0) {
       const isIncreasing = quantity > previousQuantity.current;
-      
-      // Reset all animations
+
       slideAnim.setValue(isIncreasing ? 30 : -30);
       scaleAnim.setValue(0);
       rotateAnim.setValue(isIncreasing ? 1 : -1);
       opacityAnim.setValue(0);
-      
-      // Run complex parallel and sequence animations
+
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
@@ -84,7 +82,7 @@ export default function MenuItemCard({
           useNativeDriver: true,
         }),
       ]).start();
-      
+
       previousQuantity.current = quantity;
     }
   }, [quantity]);
@@ -95,16 +93,36 @@ export default function MenuItemCard({
   });
 
   return (
-    <View style={[styles.container, isInCart ? styles.containerInCart : styles.containerNotInCart]}>
-      {/* Image or empty space */}
+    <View style={[
+      styles.container,
+      isAvailable
+        ? isInCart ? styles.containerInCart : styles.containerNotInCart
+        : styles.containerUnavailable,
+    ]}>
+
+      {/* Unavailable badge - top right corner */}
+      {!isAvailable && (
+        <View style={styles.unavailableBadge}>
+          <Text style={styles.unavailableBadgeText}>Unavailable</Text>
+        </View>
+      )}
+
+      {/* Image */}
       {item.image ? (
-        <Image source={item.image} style={styles.image} resizeMode="cover" />
+        <Image
+          source={item.image}
+          style={[styles.image, !isAvailable && styles.imageUnavailable]}
+          resizeMode="cover"
+        />
       ) : (
         <View style={styles.imagePlaceholder} />
       )}
 
       {/* Name */}
-      <Text style={styles.name} numberOfLines={1}>
+      <Text
+        style={[styles.name, !isAvailable && styles.nameUnavailable]}
+        numberOfLines={1}
+      >
         {item.name}
       </Text>
 
@@ -122,46 +140,53 @@ export default function MenuItemCard({
       </Text>
 
       {/* Price and Button */}
-      <View style={styles.priceButtonContainer}>
-        <Text style={styles.price}>${item.price.toFixed(2)}</Text>
+{/* Price and Button */}
+<View style={styles.priceButtonContainer}>
+  <Text style={[styles.price, !isAvailable && styles.priceUnavailable]}>
+    ${item.price.toFixed(2)}
+  </Text>
 
-        {/* Single Button Container */}
-        <View style={styles.buttonContainer}>
-          {isInCart ? (
-            <>
-              <TouchableOpacity onPress={() => onRemove(item.id)} style={styles.quantityButton}>
-                <Text style={styles.quantityButtonText}>−</Text>
-              </TouchableOpacity>
+  {isAvailable && (
+    <View style={[
+      styles.buttonContainer,
+      isInCart && styles.buttonContainer,
+    ]}>
+      {isInCart ? (
+        <>
+          <TouchableOpacity onPress={() => onRemove(item.id)} style={styles.quantityButton}>
+            <Text style={styles.quantityButtonText}>−</Text>
+          </TouchableOpacity>
 
-              <View style={styles.quantityContainer}>
-                <Animated.Text
-                  style={[
-                    styles.quantityText,
-                    {
-                      transform: [
-                        { translateY: slideAnim },
-                        { scale: scaleAnim },
-                        { rotate: rotate },
-                      ],
-                      opacity: opacityAnim,
-                    },
-                  ]}
-                >
-                  {quantity}
-                </Animated.Text>
-              </View>
+          <View style={styles.quantityContainer}>
+            <Animated.Text
+              style={[
+                styles.quantityText,
+                {
+                  transform: [
+                    { translateY: slideAnim },
+                    { scale: scaleAnim },
+                    { rotate: rotate },
+                  ],
+                  opacity: opacityAnim,
+                },
+              ]}
+            >
+              {quantity}
+            </Animated.Text>
+          </View>
 
-              <TouchableOpacity onPress={() => onAdd(item.id)} style={styles.quantityButton}>
-                <Text style={styles.quantityButtonText}>+</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity onPress={() => onAdd(item.id)} style={styles.addButtonContent}>
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          <TouchableOpacity onPress={() => onAdd(item.id)} style={styles.quantityButton}>
+            <Text style={styles.quantityButtonText}>+</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <TouchableOpacity onPress={() => onAdd(item.id)} style={styles.addButtonContent}>
+          <Text style={styles.addButtonText}>Add</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  )}
+</View>
     </View>
   );
 }

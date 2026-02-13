@@ -1,13 +1,13 @@
-import React from 'react';
-import { ScrollView, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import { createCategoryFilterStyles } from './styles/CategoryFilter.styles';
 
-// Fixed: Match MenuScreen categories (backend uses capitalized names)
 type CategoryType = 'all' | 'Appetizers' | 'Mains' | 'Desserts' | 'Beverages';
 
 interface Category {
-  id: CategoryType; // Fixed: Changed from string to CategoryType
+  id: CategoryType;
   label: string;
   icon: string;
 }
@@ -49,13 +49,18 @@ export default function CategoryFilter({
         return (
           <TouchableOpacity
             key={category.id}
-            onPress={() => setSelectedCategory(category.id)} 
+            onPress={() => setSelectedCategory(category.id)}
             style={[
               styles.categoryButton,
               isSelected ? styles.categoryButtonSelected : styles.categoryButtonUnselected,
             ]}
           >
-            <Text style={styles.categoryIcon}>{category.icon}</Text>
+            <Ionicons
+              name={category.icon as any}
+              size={16}
+              color={isSelected ? theme.colors.contrast.white : theme.colors.foreground.secondary}
+              style={{ marginBottom: theme.spacing.space100 }}
+            />
             <Text
               style={[
                 styles.categoryLabel,
