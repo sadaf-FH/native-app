@@ -10,6 +10,7 @@ export interface Restaurant {
   timezone: string;
   createdAt: string;
   updatedAt: string;
+  token: string;
 }
 
 export interface TimeAvailability {
