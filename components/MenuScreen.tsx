@@ -66,6 +66,7 @@ export default function MenuScreen() {
   const [showCart, setShowCart] = useState(false);
   const [hasActiveOrder, setHasActiveOrder] = useState(false);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null); // ← tracks real order ID
 
   useEffect(() => {
     if (restaurant) {
@@ -95,15 +96,16 @@ export default function MenuScreen() {
         const discount = price?.discount || 0;
 
         const categoryMap: Record<string, 'appetizer' | 'main' | 'dessert' | 'beverage'> = {
-          'Appetizers': 'appetizer',
-          'Mains': 'main',
-          'Desserts': 'dessert',
-          'Beverages': 'beverage',
+          Appetizers: 'appetizer',
+          Mains: 'main',
+          Desserts: 'dessert',
+          Beverages: 'beverage',
         };
 
         const itemImage = item.image_base64
           ? { uri: item.image_base64 }
-          : PLACEHOLDER_IMAGES[category.name as keyof typeof PLACEHOLDER_IMAGES] || PLACEHOLDER_IMAGES.Mains;
+          : PLACEHOLDER_IMAGES[category.name as keyof typeof PLACEHOLDER_IMAGES] ||
+            PLACEHOLDER_IMAGES.Mains;
 
         items.push({
           id: item.item_id,
@@ -135,10 +137,11 @@ export default function MenuScreen() {
     ...(menu?.Categories?.map((cat) => ({
       id: cat.name as CategoryType,
       label: cat.name,
-      icon: cat.name === 'Appetizers' ? 'leaf-outline' :
-            cat.name === 'Mains' ? 'pizza-outline' :
-            cat.name === 'Desserts' ? 'ice-cream-outline' :
-            cat.name === 'Beverages' ? 'wine-outline' : 'restaurant-outline',
+      icon:
+        cat.name === 'Appetizers' ? 'leaf-outline' :
+        cat.name === 'Mains' ? 'pizza-outline' :
+        cat.name === 'Desserts' ? 'ice-cream-outline' :
+        cat.name === 'Beverages' ? 'wine-outline' : 'restaurant-outline',
     })) || []),
   ];
 
@@ -153,11 +156,11 @@ export default function MenuScreen() {
 
     if (selectedCategory !== 'all') {
       const backendCategoryMap: Record<CategoryType, string> = {
-        'all': '',
-        'Appetizers': 'appetizer',
-        'Mains': 'main',
-        'Desserts': 'dessert',
-        'Beverages': 'beverage',
+        all: '',
+        Appetizers: 'appetizer',
+        Mains: 'main',
+        Desserts: 'dessert',
+        Beverages: 'beverage',
       };
 
       const frontendCategory = backendCategoryMap[selectedCategory];
@@ -170,7 +173,7 @@ export default function MenuScreen() {
       filtered = filtered.filter(
         (item) =>
           item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchQuery.toLowerCase())
+          item.description.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -187,10 +190,7 @@ export default function MenuScreen() {
   const filteredMenu = getFilteredAndSortedMenu();
 
   const addToCart = (itemId: string) => {
-    setCart((prev) => ({
-      ...prev,
-      [itemId]: (prev[itemId] || 0) + 1,
-    }));
+    setCart((prev) => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
     toast.show('Added to cart!', 'success');
   };
 
@@ -223,11 +223,14 @@ export default function MenuScreen() {
     return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   };
 
-  const handlePlaceOrder = () => {
+  // Called by CartModal after order + payment succeed
+  const handlePlaceOrder = (orderId: string) => {
     setShowCart(false);
     setHasActiveOrder(true);
+    setActiveOrderId(orderId);       // ← store the real order ID
+    setShowOrderStatus(true);        // ← open status modal immediately
     toast.show('Order placed successfully!', 'success');
-    setTimeout(() => setCart({}), 500);
+    setTimeout(() => setCart({}), 300);
   };
 
   const renderMenuItem = ({ item }: { item: MenuItem }) => {
@@ -264,21 +267,25 @@ export default function MenuScreen() {
 
   if (isLoading && !menu) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
+      >
         <Header
-          title={restaurant?.name || "La Tavola"}
-          subtitle={restaurant?.location || "Loading..."}
+          title={restaurant?.name || 'La Tavola'}
+          subtitle={restaurant?.location || 'Loading...'}
           showThemeToggle={true}
           showSearch={false}
           showCart={false}
         />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={accent} />
-          <Text style={{
-            color: theme.colors.foreground.secondary,
-            marginTop: theme.spacing.space400,
-            fontSize: theme.fontSize.fs300,
-          }}>
+          <Text
+            style={{
+              color: theme.colors.foreground.secondary,
+              marginTop: theme.spacing.space400,
+              fontSize: theme.fontSize.fs300,
+            }}
+          >
             Loading menu...
           </Text>
         </View>
@@ -287,10 +294,12 @@ export default function MenuScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
+    >
       <Header
-        title={restaurant?.name || "La Tavola"}
-        subtitle={restaurant?.location || "Fine Dining"}
+        title={restaurant?.name || 'La Tavola'}
+        subtitle={restaurant?.location || 'Fine Dining'}
         showThemeToggle={true}
         showSearch={true}
         showCart={true}
@@ -332,7 +341,7 @@ export default function MenuScreen() {
         cart={cart}
         onClose={() => setShowCart(false)}
         onClearCart={clearCart}
-        onPlaceOrder={handlePlaceOrder}
+        onPlaceOrder={handlePlaceOrder}  // ← now receives orderId
         addToCart={addToCart}
         removeFromCart={removeFromCart}
         menuData={displayMenu}
@@ -342,6 +351,7 @@ export default function MenuScreen() {
 
       <OrderStatusModal
         visible={showOrderStatus}
+        orderId={activeOrderId}           // ← passes real order ID
         onClose={() => setShowOrderStatus(false)}
       />
     </SafeAreaView>

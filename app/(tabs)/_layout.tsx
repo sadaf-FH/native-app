@@ -10,7 +10,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      key={isDark ? 'dark' : 'light'} 
+      key={isDark ? 'dark' : 'light'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: accent,
@@ -27,43 +27,41 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-  name="menu"
-  options={{
-    title: "Menu",
-    tabBarIcon: ({ color, size }) => (
-      <Ionicons name="restaurant" size={size} color={color} />
-    ),
-  }}
-/>
-
-<Tabs.Screen
-  name="admin"
-  options={{
-    title: "Admin",
-    tabBarIcon: ({ color, size }) => (
-      <Ionicons name="settings" size={size} color={color} />
-    ),
-  }}
-/>
-
-<Tabs.Screen
-  name="profile"
-  options={{
-    title: "Profile",
-    tabBarIcon: ({ color, size }) => (
-      <Ionicons name="person" size={size} color={color} />
-    ),
-  }}
-/>
-<Tabs.Screen
-  name="order-flow"
-  options={{
-    title: "Order Flow",
-    tabBarIcon: ({ color, size }) => (
-      <Ionicons name="person" size={size} color={color} />
-    ),
-  }}
-/>
+        name="menu"
+        options={{
+          title: 'Menu',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="restaurant" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="kitchen"
+        options={{
+          title: 'Kitchen',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flame" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

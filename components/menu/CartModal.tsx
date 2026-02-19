@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -10,8 +12,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppSelector } from '@/store/hooks';
+import api from '@/services/api';
 import CartItem from './CartItem';
 import EmptyState from './EmptyState';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 const accent = '#C0392B';
 const white = '#ffffff';
@@ -32,7 +38,7 @@ interface CartModalProps {
   cart: { [key: string]: number };
   onClose: () => void;
   onClearCart: () => void;
-  onPlaceOrder: () => void;
+  onPlaceOrder: (orderId: string) => void;
   addToCart: (itemId: string) => void;
   removeFromCart: (itemId: string) => void;
   menuData: MenuItem[];
@@ -52,8 +58,12 @@ export default function CartModal({
   getTotalPrice,
   getTotalItems,
 }: CartModalProps) {
+  const restaurant = useAppSelector((state) => state.restaurant.restaurant);
+
   const [screen, setScreen] = useState<'cart' | 'payment'>('cart');
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [isLoading, setIsLoading] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
 
   const subtotal = getTotalPrice();
   const tax = subtotal * 0.09;
@@ -62,15 +72,77 @@ export default function CartModal({
 
   const handleClose = () => {
     setScreen('cart');
+    setIsLoading(false);
     onClose();
   };
 
-  const handlePay = () => {
-    setScreen('cart');
-    onPlaceOrder(); // ← triggers hasActiveOrder in Menu.tsx
+  const handlePay = async () => {
+    if (!restaurant?.token || !restaurant?.R_ID) {
+      Alert.alert('Error', 'Restaurant session expired. Please restart the app.');
+      return;
+    }
+
+    if (!deliveryAddress.trim()) {
+      Alert.alert('Missing Info', 'Please enter a delivery address.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Step 1 — build items array from cart
+      const items = Object.entries(cart).map(([itemId, quantity]) => {
+        const item = menuData.find((i) => i.id === itemId);
+        return {
+          itemId,
+          name: item?.name ?? 'Unknown',
+          quantity,
+          unitPrice: item?.price ?? 0,
+        };
+      });
+
+      // Step 2 — create order
+      const orderRes = await api.createOrder({
+        restaurantId: restaurant.R_ID,
+        items,
+        deliveryAddress: deliveryAddress.trim(),
+        idempotencyKey: uuidv4(),
+        token: restaurant.token,
+      });
+
+      if (!orderRes.success || !orderRes.data) {
+        Alert.alert('Order Failed', orderRes.error ?? 'Could not place order. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      const orderId = orderRes.data.order_id;
+
+      // Step 3 — initiate payment
+      const paymentRes = await api.initiatePayment({
+        orderId,
+        amount: Math.round(total),
+        idempotencyKey: uuidv4(),
+        token: restaurant.token,
+      });
+
+      if (!paymentRes.success) {
+        Alert.alert('Payment Failed', paymentRes.error ?? 'Payment could not be processed.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 4 — success, hand orderId back to Menu.tsx
+      setScreen('cart');
+      onPlaceOrder(orderId);
+    } catch (err) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // ─── Screen 1: Cart ─────────────────────────────────────────────────────────
+  // ─── Screen 1: Cart ──────────────────────────────────────────────────────────
   const renderCart = () => (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
@@ -110,6 +182,18 @@ export default function CartModal({
 
             <View style={s.divider} />
 
+            {/* Delivery Address */}
+            <Text style={s.sectionTitle}>Delivery Address</Text>
+            <TextInput
+              style={s.input}
+              placeholder="Enter delivery address"
+              placeholderTextColor={textTertiary}
+              value={deliveryAddress}
+              onChangeText={setDeliveryAddress}
+            />
+
+            <View style={s.divider} />
+
             {/* Promo */}
             <View style={s.promoRow}>
               <TextInput
@@ -129,7 +213,7 @@ export default function CartModal({
               <Text style={s.summaryValue}>₹{Math.round(subtotal)}</Text>
             </View>
             <View style={s.summaryRow}>
-              <Text style={s.summaryLabel}>Tax:</Text>
+              <Text style={s.summaryLabel}>Tax (9%):</Text>
               <Text style={s.summaryValue}>₹{Math.round(tax)}</Text>
             </View>
             <View style={s.summaryRow}>
@@ -158,34 +242,30 @@ export default function CartModal({
     </SafeAreaView>
   );
 
-  // ─── Screen 2: Payment ──────────────────────────────────────────────────────
+  // ─── Screen 2: Payment ────────────────────────────────────────────────────────
   const renderPayment = () => (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
-        <TouchableOpacity style={s.headerLeft} onPress={() => setScreen('cart')}>
+        <TouchableOpacity
+          style={s.headerLeft}
+          onPress={() => !isLoading && setScreen('cart')}
+        >
           <Ionicons name="arrow-back" size={20} color={textColor} />
           <Text style={s.headerTitle}>Make Payment</Text>
         </TouchableOpacity>
         <View style={s.badge}>
-          <Text style={s.badgeText}>#2024</Text>
+          <Text style={s.badgeText}>₹{Math.round(total)}</Text>
         </View>
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
         <Text style={s.sectionTitle}>Order Summary</Text>
         <View style={s.summaryRow}>
-          <Text style={s.summaryLabel}>Total Amount</Text>
-          <Text style={[s.summaryValue, { fontWeight: '700', color: textColor }]}>
-            ₹{Math.round(total)}
-          </Text>
-        </View>
-        <View style={s.divider} />
-        <View style={s.summaryRow}>
           <Text style={s.summaryLabel}>Subtotal:</Text>
           <Text style={s.summaryValue}>₹{Math.round(subtotal)}</Text>
         </View>
         <View style={s.summaryRow}>
-          <Text style={s.summaryLabel}>Tax:</Text>
+          <Text style={s.summaryLabel}>Tax (9%):</Text>
           <Text style={s.summaryValue}>₹{Math.round(tax)}</Text>
         </View>
         <View style={s.summaryRow}>
@@ -195,6 +275,13 @@ export default function CartModal({
         <View style={s.totalRow}>
           <Text style={s.totalLabel}>Total:</Text>
           <Text style={s.totalValue}>₹{Math.round(total)}</Text>
+        </View>
+
+        <View style={s.divider} />
+
+        <Text style={s.sectionTitle}>Delivery To</Text>
+        <View style={s.infoBox}>
+          <Text style={s.infoBoxText}>{deliveryAddress || 'No address provided'}</Text>
         </View>
 
         <View style={s.divider} />
@@ -213,40 +300,31 @@ export default function CartModal({
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity>
-          <Text style={[s.accentText, { marginBottom: 16 }]}>+ Add New Card</Text>
+        <TouchableOpacity
+          style={[s.paymentOption, paymentMethod === 'cash' && s.paymentOptionSelected]}
+          onPress={() => setPaymentMethod('cash')}
+        >
+          <View style={[s.radio, paymentMethod === 'cash' && s.radioSelected]}>
+            {paymentMethod === 'cash' && <View style={s.radioDot} />}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.itemName}>Cash on Delivery</Text>
+            <Text style={s.itemSub}>Pay when your order arrives</Text>
+          </View>
         </TouchableOpacity>
-
-        <Text style={s.sectionTitle}>Card Details</Text>
-        <TextInput
-          style={s.input}
-          placeholder="Cardholder Name"
-          placeholderTextColor={textTertiary}
-        />
-        <TextInput
-          style={s.input}
-          placeholder="Card Number"
-          placeholderTextColor={textTertiary}
-          keyboardType="numeric"
-        />
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput
-            style={[s.input, { flex: 1 }]}
-            placeholder="MM / YY"
-            placeholderTextColor={textTertiary}
-          />
-          <TextInput
-            style={[s.input, { width: 80 }]}
-            placeholder="CVV"
-            placeholderTextColor={textTertiary}
-            secureTextEntry
-          />
-        </View>
       </ScrollView>
 
       <View style={s.footer}>
-        <TouchableOpacity style={[s.primaryBtn, { flex: 1 }]} onPress={handlePay}>
-          <Text style={s.primaryBtnText}>Pay ₹{Math.round(total)}</Text>
+        <TouchableOpacity
+          style={[s.primaryBtn, { flex: 1, opacity: isLoading ? 0.7 : 1 }]}
+          onPress={handlePay}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={white} />
+          ) : (
+            <Text style={s.primaryBtnText}>Pay ₹{Math.round(total)}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -292,6 +370,23 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   divider: { height: 1, backgroundColor: borderColor, marginVertical: 12 },
+  input: {
+    borderWidth: 1,
+    borderColor: borderColor,
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 13,
+    color: textColor,
+    marginBottom: 8,
+    backgroundColor: white,
+  },
+  infoBox: {
+    backgroundColor: bg,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 4,
+  },
+  infoBoxText: { fontSize: 13, color: textColor },
   promoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -334,6 +429,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryBtnText: { color: white, fontSize: 15, fontWeight: '700' },
   secondaryBtn: {
@@ -369,14 +465,4 @@ const s = StyleSheet.create({
   },
   radioSelected: { borderColor: accent },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: accent },
-  input: {
-    borderWidth: 1,
-    borderColor: borderColor,
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 13,
-    color: textColor,
-    marginBottom: 8,
-    backgroundColor: white,
-  },
 });

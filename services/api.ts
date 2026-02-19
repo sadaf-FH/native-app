@@ -163,6 +163,94 @@ async updateMenuItem(
       method: 'GET',
     });
   }
+
+  async createOrder(data: {
+  restaurantId: string;
+  items: { itemId: string; name: string; quantity: number; unitPrice: number }[];
+  deliveryAddress: string;
+  idempotencyKey: string;
+  token: string;
+}): Promise<ApiResponse<any>> {
+  return this.request<any>('/orders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${data.token}`,
+      'idempotency-key': data.idempotencyKey,
+    },
+    body: JSON.stringify({
+      restaurantId: data.restaurantId,
+      items: data.items,
+      deliveryAddress: data.deliveryAddress,
+    }),
+  });
 }
 
+async getOrder(orderId: string, token: string): Promise<ApiResponse<any>> {
+  return this.request<any>(`/orders/${orderId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+}
+
+async initiatePayment(data: {
+  orderId: string;
+  amount: number;
+  idempotencyKey: string;
+  token: string;
+}): Promise<ApiResponse<any>> {
+  return this.request<any>('/payments/initiate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${data.token}`,
+      'idempotency-key': data.idempotencyKey,
+    },
+    body: JSON.stringify({
+      orderId: data.orderId,
+      amount: data.amount,
+    }),
+  });
+}
+
+async getOrdersByStatus(
+  status: string,
+  token: string,
+  page = 1,
+  limit = 20,
+): Promise<ApiResponse<any>> {
+  return this.request<any>(
+    `/orders?status=${status}&page=${page}&limit=${limit}`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+async updateOrderStatus(
+  orderId: string,
+  newStatus: string,
+  token: string,
+  reason?: string,
+): Promise<ApiResponse<any>> {
+  return this.request<any>(`/orders/${orderId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ newStatus, reason }),
+  });
+}
+
+async cancelOrder(orderId: string, token: string): Promise<ApiResponse<any>> {
+  return this.request<any>(`/orders/${orderId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+}
 export default new ApiService();

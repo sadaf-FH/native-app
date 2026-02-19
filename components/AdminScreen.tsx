@@ -1,23 +1,36 @@
-import { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput,
+import { createCreateMenuScreenStyles } from '@/components/styles/Admin.styles';
+import Header from '@/components/base/Header';
+import { useTheme } from '@/hooks/useTheme';
+import { useToast } from '@/hooks/useToast';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { addMenuItem, createMenu, fetchMenuByRestaurant } from '@/store/slices/menuSlice';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useEffect, useState } from 'react';
+import {
   ActivityIndicator,
+  Alert,
   Image,
-  Alert
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@/hooks/useTheme';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
-import { createCreateMenuScreenStyles } from './styles/Admin.styles';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { createMenu, addMenuItem, fetchMenuByRestaurant } from '@/store/slices/menuSlice';
-import { useToast } from '@/hooks/useToast';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+
+let ImagePicker: any = null;
+let FileSystem: any = null;
+
+try {
+  ImagePicker = require('expo-image-picker');
+  if (Platform.OS !== 'web') {
+    FileSystem = require('expo-file-system/legacy');
+  }
+} catch (e) {
+  console.log('Image picker not available - using without images');
+}
 
 export default function CreateMenuScreen() {
   const theme = useTheme();
@@ -38,7 +51,7 @@ export default function CreateMenuScreen() {
     shadows: theme.shadows,
     accent,
   });
-  
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -46,21 +59,20 @@ export default function CreateMenuScreen() {
     category: 'Mains' as string,
   });
 
-  const [tags, setTags] = useState({
-    isVegetarian: false,
-    isSpicy: false,
-    isPopular: false,
-    isNew: false,
-  });
-
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const isImagePickerAvailable = ImagePicker !== null;
+
+  const [availableFrom, setAvailableFrom] = useState<Date | null>(null);
+  const [availableTo, setAvailableTo] = useState<Date | null>(null);
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
 
   const categories = [
-    { id: 'Appetizers', label: 'Appetizers', icon: '🥗' },
-    { id: 'Mains', label: 'Mains', icon: '🍝' },
-    { id: 'Desserts', label: 'Desserts', icon: '🍰' },
-    { id: 'Beverages', label: 'Beverages', icon: '🍷' },
+    { id: 'Appetizers', label: 'Appetizers', icon: 'leaf-outline' },
+    { id: 'Mains', label: 'Mains', icon: 'pizza-outline' },
+    { id: 'Desserts', label: 'Desserts', icon: 'ice-cream-outline' },
+    { id: 'Beverages', label: 'Beverages', icon: 'wine-outline' },
   ];
 
   useEffect(() => {
@@ -70,9 +82,18 @@ export default function CreateMenuScreen() {
   }, [restaurant, menu]);
 
   const pickImage = async () => {
+    if (!isImagePickerAvailable) {
+      Alert.alert(
+        'Feature Not Available',
+        'Image upload requires a development build. For now, you can add items without images.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert('Permission needed', 'Please grant camera roll permissions to upload images');
         return;
@@ -83,11 +104,12 @@ export default function CreateMenuScreen() {
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.5,
+        base64: Platform.OS === 'web',
       });
 
       if (!result.canceled) {
         setImageUri(result.assets[0].uri);
-        toast.show('Image selected! 📷', 'success');
+        toast.show('Image selected!', 'success');
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -97,6 +119,25 @@ export default function CreateMenuScreen() {
 
   const convertImageToBase64 = async (uri: string): Promise<string> => {
     try {
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64data = reader.result as string;
+            resolve(base64data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      if (!FileSystem) {
+        throw new Error('FileSystem not available');
+      }
+
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: 'base64',
       });
@@ -104,6 +145,33 @@ export default function CreateMenuScreen() {
     } catch (error) {
       console.error('Error converting image to base64:', error);
       throw error;
+    }
+  };
+
+  const formatDateToTime = (date: Date): string => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  };
+
+  const formatTime24Hour = (date: Date): string => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const handleFromTimeChange = (event: any, selectedDate?: Date) => {
+    setShowFromPicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setAvailableFrom(selectedDate);
+    }
+  };
+
+  const handleToTimeChange = (event: any, selectedDate?: Date) => {
+    setShowToPicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setAvailableTo(selectedDate);
     }
   };
 
@@ -118,13 +186,31 @@ export default function CreateMenuScreen() {
       return;
     }
 
+    if ((availableFrom && !availableTo) || (!availableFrom && availableTo)) {
+      toast.show('Please set both start and end times', 'error');
+      return;
+    }
+
+    if (availableFrom && availableTo && availableFrom >= availableTo) {
+      toast.show('End time must be after start time', 'error');
+      return;
+    }
+
     setIsProcessingImage(true);
 
     try {
       let imageBase64: string | undefined;
-      
+
       if (imageUri) {
         imageBase64 = await convertImageToBase64(imageUri);
+      }
+
+      let timeAvailability = undefined;
+      if (availableFrom && availableTo) {
+        timeAvailability = {
+          available_from: formatDateToTime(availableFrom),
+          available_to: formatDateToTime(availableTo),
+        };
       }
 
       const result = await dispatch(addMenuItem({
@@ -136,26 +222,22 @@ export default function CreateMenuScreen() {
           price: parseFloat(formData.price),
           orderType: 'DINE_IN',
           imageBase64,
-          ...tags,
+          time: timeAvailability,
         },
       }));
 
       if (addMenuItem.fulfilled.match(result)) {
-        toast.show('Item added successfully! 🎉', 'success');
-        
+        toast.show('Item added successfully!', 'success');
+
         setFormData({
           name: '',
           description: '',
           price: '',
           category: 'Mains',
         });
-        setTags({
-          isVegetarian: false,
-          isSpicy: false,
-          isPopular: false,
-          isNew: false,
-        });
         setImageUri(null);
+        setAvailableFrom(null);
+        setAvailableTo(null);
 
         if (restaurant) {
           dispatch(fetchMenuByRestaurant(restaurant.R_ID));
@@ -165,7 +247,7 @@ export default function CreateMenuScreen() {
       }
     } catch (error) {
       console.error('Error submitting item:', error);
-      toast.show('Failed to process image', 'error');
+      toast.show('Failed to process item', 'error');
     } finally {
       setIsProcessingImage(false);
     }
@@ -173,34 +255,15 @@ export default function CreateMenuScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>Add Menu Item</Text>
-          <Text style={styles.headerSubtitle}>
-            {menu ? `${menu.Categories?.length || 0} categories` : 'Loading...'}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={theme.toggleTheme} style={styles.themeToggleButton}>
-          {theme.isDark ? (
-            <Svg width={22} height={22} viewBox="0 0 24 24">
-              <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="white" />
-            </Svg>
-          ) : (
-            <Svg width={22} height={22} viewBox="0 0 24 24">
-              <Circle cx="12" cy="12" r="5" fill="white" />
-              <Line x1="12" y1="1" x2="12" y2="4" stroke="white" strokeWidth="2" />
-              <Line x1="12" y1="20" x2="12" y2="23" stroke="white" strokeWidth="2" />
-              <Line x1="1" y1="12" x2="4" y2="12" stroke="white" strokeWidth="2" />
-              <Line x1="20" y1="12" x2="23" y2="12" stroke="white" strokeWidth="2" />
-              <Line x1="4.5" y1="4.5" x2="6.5" y2="6.5" stroke="white" strokeWidth="2" />
-              <Line x1="17.5" y1="17.5" x2="19.5" y2="19.5" stroke="white" strokeWidth="2" />
-              <Line x1="4.5" y1="19.5" x2="6.5" y2="17.5" stroke="white" strokeWidth="2" />
-              <Line x1="17.5" y1="6.5" x2="19.5" y2="4.5" stroke="white" strokeWidth="2" />
-            </Svg>
-          )}
-        </TouchableOpacity>
-      </View>
+
+      {/* ✅ Shared Header — replaces the inline header + SVG toggle */}
+      <Header
+        title="Add Menu Item"
+        subtitle={menu ? `${menu.Categories?.length || 0} categories` : 'Loading...'}
+        showThemeToggle={true}
+        showSearch={false}
+        showCart={false}
+      />
 
       {/* Category Selection */}
       <ScrollView
@@ -220,7 +283,12 @@ export default function CreateMenuScreen() {
                 isSelected ? styles.categoryButtonSelected : styles.categoryButtonUnselected,
               ]}
             >
-              <Text style={styles.categoryIcon}>{category.icon}</Text>
+              <Ionicons
+                name={category.icon as any}
+                size={18}
+                color={isSelected ? theme.colors.contrast.white : theme.colors.foreground.secondary}
+                style={{ marginBottom: theme.spacing.space100 }}
+              />
               <Text
                 style={[
                   styles.categoryLabel,
@@ -241,77 +309,72 @@ export default function CreateMenuScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Image Picker */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Image (Optional)</Text>
-          <TouchableOpacity
-            onPress={pickImage}
-            disabled={isLoading || isProcessingImage}
-            style={{
-              backgroundColor: theme.colors.background.elevated,
-              borderRadius: theme.borderRadius.br50,
-              borderWidth: theme.borderWidth.bw10,
-              borderColor: theme.colors.border.subtle,
-              overflow: 'hidden',
-              marginBottom: theme.spacing.space200,
-            }}
-          >
-            {imageUri ? (
-              <Image
-                source={{ uri: imageUri }}
-                style={{
-                  width: '100%',
-                  height: 200,
-                }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={{ 
-                alignItems: 'center', 
-                padding: theme.spacing.space600,
-                backgroundColor: theme.colors.background.secondary,
-              }}>
-                <Text style={{ 
-                  fontSize: theme.fontSize.fs900, 
-                  marginBottom: theme.spacing.space300 
-                }}>
-                  📷
-                </Text>
-                <Text style={{ 
-                  color: theme.colors.foreground.primary,
-                  fontSize: theme.fontSize.fs300,
-                  fontWeight: theme.fontWeight.medium,
-                  marginBottom: theme.spacing.space100,
-                }}>
-                  Tap to add image
-                </Text>
-                <Text style={{ 
-                  color: theme.colors.foreground.tertiary,
-                  fontSize: theme.fontSize.fs200,
-                }}>
-                  Recommended: 4:3 ratio
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          {imageUri && (
+        {isImagePickerAvailable && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Image (Optional)</Text>
             <TouchableOpacity
-              onPress={() => setImageUri(null)}
+              onPress={pickImage}
+              disabled={isLoading || isProcessingImage}
               style={{
-                backgroundColor: theme.colors.background.secondary,
-                padding: theme.spacing.space200,
+                backgroundColor: theme.colors.background.elevated,
                 borderRadius: theme.borderRadius.br50,
-                alignItems: 'center',
+                borderWidth: theme.borderWidth.bw10,
+                borderColor: theme.colors.border.subtle,
+                overflow: 'hidden',
+                marginBottom: theme.spacing.space200,
               }}
             >
-              <Text style={{ 
-                color: theme.colors.foreground.negative,
-                fontSize: theme.fontSize.fs300,
-              }}>
-                Remove Image
-              </Text>
+              {imageUri ? (
+                <Image
+                  source={{ uri: imageUri }}
+                  style={{ width: '100%', height: 200 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{
+                  alignItems: 'center',
+                  padding: theme.spacing.space600,
+                  backgroundColor: theme.colors.background.secondary,
+                }}>
+                  <Ionicons name="camera-outline" size={24} color={theme.colors.foreground.primary} />
+                  <Text style={{
+                    color: theme.colors.foreground.primary,
+                    fontSize: theme.fontSize.fs300,
+                    fontWeight: theme.fontWeight.medium,
+                    marginBottom: theme.spacing.space100,
+                  }}>
+                    Tap to add image
+                  </Text>
+                  <Text style={{
+                    color: theme.colors.foreground.tertiary,
+                    fontSize: theme.fontSize.fs200,
+                  }}>
+                    Recommended: 4:3 ratio
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
-          )}
-        </View>
+            {imageUri && (
+              <TouchableOpacity
+                onPress={() => setImageUri(null)}
+                style={{
+                  backgroundColor: theme.colors.background.secondary,
+                  padding: theme.spacing.space200,
+                  borderRadius: theme.borderRadius.br50,
+                  alignItems: 'center',
+                  marginBottom: theme.spacing.space300,
+                }}
+              >
+                <Text style={{
+                  color: theme.colors.foreground.negative,
+                  fontSize: theme.fontSize.fs300,
+                }}>
+                  Remove Image
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Name Input */}
         <View style={styles.inputGroup}>
@@ -358,135 +421,142 @@ export default function CreateMenuScreen() {
           </View>
         </View>
 
-        {/* Tags Section */}
-        <View style={styles.tagsSection}>
-          <Text style={styles.tagsLabel}>Tags</Text>
-          <View style={styles.tagsContainer}>
-            {/* Vegetarian */}
-            <TouchableOpacity
-              onPress={() => setTags({ ...tags, isVegetarian: !tags.isVegetarian })}
-              style={[
-                styles.tagButton,
-                tags.isVegetarian ? styles.tagButtonVegetarian : styles.tagButtonUnselected,
-              ]}
-              disabled={isLoading || isProcessingImage}
-            >
-              <View style={styles.tagContent}>
-                <Text style={styles.tagIcon}>🌱</Text>
-                <Text
-                  style={[
-                    styles.tagText,
-                    tags.isVegetarian ? styles.tagTextVegetarian : styles.tagTextUnselected,
-                  ]}
-                >
-                  Vegetarian
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tagCheckbox,
-                  tags.isVegetarian ? styles.tagCheckboxVegetarian : styles.tagCheckboxUnselected,
-                ]}
-              >
-                {tags.isVegetarian && <Text style={styles.tagCheckmark}>✓</Text>}
-              </View>
-            </TouchableOpacity>
+        {/* Availability Time Section */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Availability Time (Optional)</Text>
+          <Text style={{
+            color: theme.colors.foreground.tertiary,
+            fontSize: theme.fontSize.fs200,
+            marginBottom: theme.spacing.space300,
+          }}>
+            Leave empty for all-day availability. Set times when this item is available.
+          </Text>
 
-            {/* Spicy */}
+          {/* Available From */}
+          <View style={{ marginBottom: theme.spacing.space300 }}>
+            <Text style={[styles.inputLabel, { fontSize: theme.fontSize.fs200, marginBottom: theme.spacing.space200 }]}>
+              Available From
+            </Text>
             <TouchableOpacity
-              onPress={() => setTags({ ...tags, isSpicy: !tags.isSpicy })}
-              style={[
-                styles.tagButton,
-                tags.isSpicy ? styles.tagButtonSpicy : styles.tagButtonUnselected,
-              ]}
-              disabled={isLoading || isProcessingImage}
+              onPress={() => setShowFromPicker(true)}
+              style={{
+                backgroundColor: theme.colors.background.elevated,
+                padding: theme.spacing.space300,
+                borderRadius: theme.borderRadius.br50,
+                borderWidth: theme.borderWidth.bw10,
+                borderColor: theme.colors.border.subtle,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
             >
-              <View style={styles.tagContent}>
-                <Text style={styles.tagIcon}>🌶️</Text>
-                <Text
-                  style={[
-                    styles.tagText,
-                    tags.isSpicy ? styles.tagTextSpicy : styles.tagTextUnselected,
-                  ]}
-                >
-                  Spicy
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tagCheckbox,
-                  tags.isSpicy ? styles.tagCheckboxSpicy : styles.tagCheckboxUnselected,
-                ]}
-              >
-                {tags.isSpicy && <Text style={styles.tagCheckmark}>✓</Text>}
-              </View>
+              <Text style={{
+                color: availableFrom ? theme.colors.foreground.primary : theme.colors.foreground.lighter,
+                fontSize: theme.fontSize.fs300,
+              }}>
+                {availableFrom ? formatTime24Hour(availableFrom) : 'Select time (e.g., 09:00)'}
+              </Text>
+              <Ionicons name="time-outline" size={20} color={theme.colors.foreground.primary} />
             </TouchableOpacity>
-
-            {/* Popular */}
-            <TouchableOpacity
-              onPress={() => setTags({ ...tags, isPopular: !tags.isPopular })}
-              style={[
-                styles.tagButton,
-                tags.isPopular ? styles.tagButtonPopular : styles.tagButtonUnselected,
-              ]}
-              disabled={isLoading || isProcessingImage}
-            >
-              <View style={styles.tagContent}>
-                <Text style={styles.tagIcon}>🔥</Text>
-                <Text
-                  style={[
-                    styles.tagText,
-                    tags.isPopular ? styles.tagTextPopular : styles.tagTextUnselected,
-                  ]}
-                >
-                  Popular
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.tagCheckbox,
-                  tags.isPopular ? styles.tagCheckboxPopular : styles.tagCheckboxUnselected,
-                ]}
+            {availableFrom && (
+              <TouchableOpacity
+                onPress={() => setAvailableFrom(null)}
+                style={{ marginTop: theme.spacing.space200, alignItems: 'center' }}
               >
-                {tags.isPopular && <Text style={styles.tagCheckmark}>✓</Text>}
-              </View>
-            </TouchableOpacity>
-
-            {/* New */}
-            <TouchableOpacity
-              onPress={() => setTags({ ...tags, isNew: !tags.isNew })}
-              style={[
-                styles.tagButton,
-                tags.isNew ? styles.tagButtonNew : styles.tagButtonUnselected,
-              ]}
-              disabled={isLoading || isProcessingImage}
-            >
-              <View style={styles.tagContent}>
-                <Text style={styles.tagIcon}>✨</Text>
-                <Text
-                  style={[
-                    styles.tagText,
-                    tags.isNew ? styles.tagTextNew : styles.tagTextUnselected,
-                  ]}
-                >
-                  New Item
+                <Text style={{
+                  color: theme.colors.foreground.tertiary,
+                  fontSize: theme.fontSize.fs200,
+                }}>
+                  Clear
                 </Text>
-              </View>
-              <View
-                style={[
-                  styles.tagCheckbox,
-                  tags.isNew ? styles.tagCheckboxNew : styles.tagCheckboxUnselected,
-                ]}
-              >
-                {tags.isNew && <Text style={styles.tagCheckmark}>✓</Text>}
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
           </View>
+
+          {/* Available To */}
+          <View>
+            <Text style={[styles.inputLabel, { fontSize: theme.fontSize.fs200, marginBottom: theme.spacing.space200 }]}>
+              Available To
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowToPicker(true)}
+              style={{
+                backgroundColor: theme.colors.background.elevated,
+                padding: theme.spacing.space300,
+                borderRadius: theme.borderRadius.br50,
+                borderWidth: theme.borderWidth.bw10,
+                borderColor: theme.colors.border.subtle,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{
+                color: availableTo ? theme.colors.foreground.primary : theme.colors.foreground.lighter,
+                fontSize: theme.fontSize.fs300,
+              }}>
+                {availableTo ? formatTime24Hour(availableTo) : 'Select time (e.g., 22:00)'}
+              </Text>
+              <Ionicons name="time-outline" size={20} color={theme.colors.foreground.primary} />
+            </TouchableOpacity>
+            {availableTo && (
+              <TouchableOpacity
+                onPress={() => setAvailableTo(null)}
+                style={{ marginTop: theme.spacing.space200, alignItems: 'center' }}
+              >
+                <Text style={{
+                  color: theme.colors.foreground.tertiary,
+                  fontSize: theme.fontSize.fs200,
+                }}>
+                  Clear
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Selected time range summary */}
+          {availableFrom && availableTo && (
+            <View style={{
+              marginTop: theme.spacing.space300,
+              padding: theme.spacing.space300,
+              backgroundColor: theme.colors.background.secondary,
+              borderRadius: theme.borderRadius.br50,
+            }}>
+              <Text style={{
+                color: theme.colors.foreground.secondary,
+                fontSize: theme.fontSize.fs200,
+                textAlign: 'center',
+              }}>
+                Available: {formatTime24Hour(availableFrom)} - {formatTime24Hour(availableTo)}
+              </Text>
+            </View>
+          )}
+
+          {/* Time Pickers */}
+          {showFromPicker && (
+            <DateTimePicker
+              value={availableFrom || new Date()}
+              mode="time"
+              is24Hour={true}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleFromTimeChange}
+            />
+          )}
+
+          {showToPicker && (
+            <DateTimePicker
+              value={availableTo || new Date()}
+              mode="time"
+              is24Hour={true}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleToTimeChange}
+            />
+          )}
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity 
-          onPress={handleSubmit} 
+        <TouchableOpacity
+          onPress={handleSubmit}
           style={styles.submitButton}
           disabled={isLoading || isProcessingImage}
         >
@@ -511,15 +581,15 @@ export default function CreateMenuScreen() {
                   marginBottom: theme.spacing.space200,
                 }}
               >
-                <Text style={{ 
-                  color: theme.colors.foreground.primary, 
-                  fontWeight: theme.fontWeight.bold 
+                <Text style={{
+                  color: theme.colors.foreground.primary,
+                  fontWeight: theme.fontWeight.bold,
                 }}>
                   {cat.name}: {cat.item_count} items
                 </Text>
-                <Text style={{ 
-                  color: theme.colors.foreground.tertiary, 
-                  fontSize: theme.fontSize.fs200 
+                <Text style={{
+                  color: theme.colors.foreground.tertiary,
+                  fontSize: theme.fontSize.fs200,
                 }}>
                   Avg Price: ${cat.avg_price.toFixed(2)}
                 </Text>
